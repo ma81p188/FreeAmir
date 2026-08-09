@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('work_sites', function (Blueprint $table) {
             $table->increments('id');
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('company_id')->constrained()->noActionOnDelete();
             $table->string('name', 200);
             $table->string('code', 20)->unique();
             $table->text('address')->nullable();
@@ -33,7 +33,7 @@ return new class extends Migration
 
             $table->foreign('work_site_id')
                 ->references('id')->on('work_sites')
-                ->cascadeOnDelete();
+                ->noActionOnDelete();
         });
 
     }

@@ -54,8 +54,8 @@ return new class extends Migration
             $table->unsignedBigInteger('product_id')->after('invoice_id');
             $table->unsignedBigInteger('service_id')->after('product_id');
 
-            $table->foreign('service_id')->references('id')->on('services')->onDelete('set null');
-            $table->foreign('product_id')->references('id')->on('products')->onDelete('set null');
+            $table->foreign('service_id')->references('id')->on('services')->noActionOnDelete();
+            $table->foreign('product_id')->references('id')->on('products')->noActionOnDelete();
         });
     }
 };

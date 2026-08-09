@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('work_shifts', function (Blueprint $table) {
             $table->increments('id');
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('company_id')->constrained()->noActionOnDelete();
             $table->string('name', 200);
             $table->time('start_time');
             $table->time('end_time');

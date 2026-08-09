@@ -48,6 +48,7 @@ class UpdateProductRequest extends FormRequest
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'vat' => 'nullable|numeric|min:0|max:100',
             'sstid' => 'nullable|string',
+            'oversell' => 'nullable|boolean',
             'websites' => 'nullable|array',
             'websites.*.link' => 'required|url',
         ];

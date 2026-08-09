@@ -1,5 +1,5 @@
-<label {{ $attributes->whereDoesntStartWith('@')->merge(['class' => 'flex flex-col flex-wrap ' . $attributes->get('label_class')]) }}>
-    <span {{ $attributes->whereDoesntStartWith('@')->merge(['class' => $attributes->get('label_text_class')]) }}>
+<label {{ $attributes->whereDoesntStartWith('@')->whereDoesntStartWith('x-')->merge(['class' => 'flex flex-col flex-wrap ' . $attributes->get('label_class')]) }}>
+    <span {{ $attributes->whereDoesntStartWith('@')->whereDoesntStartWith('x-')->merge(['class' => $attributes->get('label_text_class')]) }}>
         {{ $attributes->get('title') }}
     </span>
     <input {{ $attributes->whereStartsWith('@')->merge() }} onkeyup="{{ $attributes->get('onkeyup_input') }}"

@@ -16,7 +16,7 @@ return new class extends Migration
 
             $table->foreign('monthly_attendance_id')
                 ->references('id')->on('monthly_attendances')
-                ->nullOnDelete();
+                ->noActionOnDelete();
         });
     }
 

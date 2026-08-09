@@ -28,10 +28,10 @@ return new class extends Migration
             $table->date('date');
             $table->timestamps();
 
-            $table->foreign('cheque_id')->references('id')->on('cheques')->onDelete('cascade');
-            $table->foreign('customer_id')->references('id')->on('customers')->onDelete('cascade');
-            $table->foreign('account_id')->references('id')->on('bank_accounts')->onDelete('cascade');
-            $table->foreign('transaction_id')->references('id')->on('transactions')->onDelete('cascade');
+            $table->foreign('cheque_id')->references('id')->on('cheques')->noActionOnDelete();
+            $table->foreign('customer_id')->references('id')->on('customers')->noActionOnDelete();
+            $table->foreign('account_id')->references('id')->on('bank_accounts')->noActionOnDelete();
+            $table->foreign('transaction_id')->references('id')->on('transactions')->noActionOnDelete();
         });
     }
 

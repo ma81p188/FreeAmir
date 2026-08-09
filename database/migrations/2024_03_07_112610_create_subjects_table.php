@@ -6,11 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 class CreateSubjectsTable extends Migration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
         Schema::create('subjects', function (Blueprint $table) {
@@ -18,23 +13,30 @@ class CreateSubjectsTable extends Migration
             $table->string('code', 20);
             $table->string('name', 60);
             $table->unsignedBigInteger('parent_id')->nullable();
-            $table->enum('type', ['debtor', 'creditor', 'both'])->default('both');
+
+            $table->enum('type', [
+                'debtor',
+                'creditor',
+                'both'
+            ])->default('both');
+
             $table->timestamps();
 
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete()->after('parent_id');
+            $table->foreignId('company_id')
+                ->constrained()
+                ->noActionOnDelete();
+
             $table->unique(['company_id', 'code']);
 
             $table->nullableMorphs('subjectable');
 
-            $table->foreign('parent_id')->references('id')->on('subjects')->onDelete('cascade');
+            $table->foreign('parent_id')
+                ->references('id')
+                ->on('subjects')
+                ->noActionOnDelete();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
         Schema::dropIfExists('subjects');

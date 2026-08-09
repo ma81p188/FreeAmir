@@ -12,9 +12,17 @@ class CreateCustGroupsTable extends Migration
             $table->id();
             $table->string('name', 50);
             $table->text('description')->nullable();
+
             $table->unsignedBigInteger('subject_id')->nullable();
-            $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null');
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+
+            $table->foreign('subject_id')
+                ->references('id')
+                ->on('subjects')
+                ->noActionOnDelete();
+
+            $table->foreignId('company_id')
+                ->constrained()
+                ->noActionOnDelete();
         });
     }
 

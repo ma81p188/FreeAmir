@@ -54,40 +54,171 @@ class ProductController extends Controller
 
     public function index()
     {
-        $query = Product::orderBy('code');
+        $query = Product::query()
+            ->with('productGroup')
+            ->orderBy('code');
 
-        if (request()->has('name') && request('name')) {
-            $query->where('name', 'like', '%'.request('name').'%');
+        /*
+    |--------------------------------------------------------------------------
+    | Search by Product Name
+    |--------------------------------------------------------------------------
+    | Normalize:
+    | ي -> ی
+    | ك -> ک
+    | Multiple spaces -> single space
+    |
+    | Example:
+    | "وينستون   لايت"
+    | will match:
+    | "وینستون لایت"
+    |--------------------------------------------------------------------------
+    */
+        if (request()->filled('name')) {
+            $name = trim(request('name'));
+
+            // Normalize Persian/Arabic characters in search input
+            $name = str_replace(
+                ['ي', 'ى', 'ك'],
+                ['ی', 'ی', 'ک'],
+                $name
+            );
+
+            // Normalize multiple spaces
+            $name = preg_replace('/\s+/u', ' ', $name);
+
+            /*
+         * Normalize database value as well:
+         * ي -> ی
+         * ى -> ی
+         * ك -> ک
+         * Multiple spaces are not easily normalized with SQL REPLACE,
+         * but common extra-space cases are handled by the LIKE search.
+         */
+            $query->whereRaw(
+                "REPLACE(
+                REPLACE(
+                    REPLACE(name, N'ي', N'ی'),
+                    N'ى', N'ی'
+                ),
+                N'ك', N'ک'
+            ) COLLATE Persian_100_CI_AI LIKE ?",
+                ["%{$name}%"]
+            );
         }
 
-        if (request()->has('code') && request('code')) {
-            $query->where('code', 'like', '%'.request('code').'%');
+        /*
+    |--------------------------------------------------------------------------
+    | Search by Product Code
+    |--------------------------------------------------------------------------
+    */
+        if (request()->filled('code')) {
+            $code = trim(request('code'));
+
+            $query->where(
+                'code',
+                'like',
+                '%' . $code . '%'
+            );
         }
 
-        if (request()->has('group_name') && request('group_name')) {
-            $searchGroupName = request('group_name');
-            $query->whereHas('productGroup', function ($groupName) use ($searchGroupName) {
-                $groupName->where('name', 'like', '%'.$searchGroupName.'%');
+        /*
+    |--------------------------------------------------------------------------
+    | Search by Product Group Name
+    |--------------------------------------------------------------------------
+    */
+        if (request()->filled('group_name')) {
+            $groupName = trim(request('group_name'));
+
+            // Normalize Persian/Arabic characters
+            $groupName = str_replace(
+                ['ي', 'ى', 'ك'],
+                ['ی', 'ی', 'ک'],
+                $groupName
+            );
+
+            // Normalize multiple spaces
+            $groupName = preg_replace('/\s+/u', ' ', $groupName);
+
+            $query->whereHas('productGroup', function ($groupQuery) use ($groupName) {
+                $groupQuery->whereRaw(
+                    "REPLACE(
+                    REPLACE(
+                        REPLACE(name, N'ي', N'ی'),
+                        N'ى', N'ی'
+                    ),
+                    N'ك', N'ک'
+                ) COLLATE Persian_100_CI_AI LIKE ?",
+                    ["%{$groupName}%"]
+                );
             });
         }
 
-        if (request()->filled('min_quantity') && is_numeric(request('min_quantity'))) {
-            $query->where('quantity', '>=', (float) request('min_quantity'));
+        /*
+    |--------------------------------------------------------------------------
+    | Minimum Quantity
+    |--------------------------------------------------------------------------
+    */
+        if (
+            request()->filled('min_quantity') &&
+            is_numeric(request('min_quantity'))
+        ) {
+            $query->where(
+                'quantity',
+                '>=',
+                (float) request('min_quantity')
+            );
         }
 
+        /*
+    |--------------------------------------------------------------------------
+    | Need Order
+    |--------------------------------------------------------------------------
+    */
         if (request()->boolean('need_order')) {
-            $query->where('quantity_warning', '>', 0)->whereColumn('quantity', '<=', 'quantity_warning');
+            $query
+                ->where('quantity_warning', '>', 0)
+                ->whereColumn(
+                    'quantity',
+                    '<=',
+                    'quantity_warning'
+                );
         }
 
-        $products = $query->paginate(12)->withQueryString();
+        /*
+    |--------------------------------------------------------------------------
+    | Pagination
+    |--------------------------------------------------------------------------
+    */
+        $products = $query
+            ->paginate(12)
+            ->withQueryString();
 
+        /*
+    |--------------------------------------------------------------------------
+    | Calculate Product Statistics
+    |--------------------------------------------------------------------------
+    */
         $products->transform(function ($product) {
-            $product->needs_order = (float) ($product->quantity_warning ?? 0) > 0 && (float) $product->quantity <= (float) $product->quantity_warning;
-            $product->unapprovedQuantity = $this->productService->unapprovedQuantity($product);
-            $product->totalSellCount = $this->productService->totalSellCount($product);
+
+            $product->needs_order =
+                (float) ($product->quantity_warning ?? 0) > 0 &&
+                (float) $product->quantity <=
+                (float) $product->quantity_warning;
+
+            $product->unapprovedQuantity =
+                $this->productService->unapprovedQuantity($product);
+
+            $product->totalSellCount =
+                $this->productService->totalSellCount($product);
+
             if (auth()->user()->can('reports.journal')) {
-                $product->totalSell = $this->productService->totalSell($product);
-                $product->salesProfit = $product->totalSell + $this->productService->totalCOGS($product);
+
+                $product->totalSell =
+                    $this->productService->totalSell($product);
+
+                $product->salesProfit =
+                    $product->totalSell +
+                    $this->productService->totalCOGS($product);
             }
 
             return $product;
@@ -176,9 +307,9 @@ class ProductController extends Controller
         $reportRows = $this->warehouseDashboardService->report([
             'cols_submitted' => true,
             'columns' => $selectedOptionalColumns,
-        ])['rows']->keyBy(fn (array $row) => (string) $row['code']);
+        ])['rows']->keyBy(fn(array $row) => (string) $row['code']);
 
-        $filename = 'products_'.now()->format('YmdHis').'.csv';
+        $filename = 'products_' . now()->format('YmdHis') . '.csv';
 
         return response()->streamDownload(function () use ($columnMapping, $reportRows) {
             $file = fopen('php://output', 'w');
@@ -213,7 +344,7 @@ class ProductController extends Controller
                         ]);
 
                         fputcsv($file, array_map(
-                            fn (string $column) => $row[$column] ?? null,
+                            fn(string $column) => $row[$column] ?? null,
                             array_keys($columnMapping),
                         ));
                     }
@@ -259,7 +390,7 @@ class ProductController extends Controller
         }
 
         $grouped = [
-            0 => $productGroups->map(fn ($pg) => [
+            0 => $productGroups->map(fn($pg) => [
                 'id' => $pg->id,
                 'groupId' => 0,
                 'groupName' => 'General',

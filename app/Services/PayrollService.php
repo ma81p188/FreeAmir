@@ -576,7 +576,10 @@ class PayrollService
             return 0.0;
         }
 
-        $slabs = TaxSlab::query()->orderByRaw('income_to IS NULL, income_to ASC')->get();
+        $slabs = TaxSlab::query()
+            ->orderByRaw('CASE WHEN income_to IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('income_to')
+            ->get();
 
         if ($slabs->isEmpty()) {
             throw ValidationException::withMessages(['tax' => [__('Tax slabs are not configured.')]]);

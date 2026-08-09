@@ -17,6 +17,7 @@ use App\Models\ServiceGroup;
 use App\Services\AncillaryCostService;
 use App\Services\FiscalYearTransferService;
 use App\Services\GroupActionService;
+use App\Services\InvoiceCsvImportService;
 use App\Services\InvoiceService;
 use App\Services\MoadianService;
 use App\Services\PaymentService;
@@ -34,6 +35,7 @@ class InvoiceController extends Controller
 {
     public function __construct(
         private readonly InvoiceService $invoiceService,
+        private readonly InvoiceCsvImportService $invoiceCsvImportService,
         private readonly AncillaryCostService $ancillaryCostService,
         private readonly GroupActionService $groupActionService
     ) {}
@@ -52,7 +54,8 @@ class InvoiceController extends Controller
             ->orderByDesc('date')
             ->orderByDesc('number');
 
-        $builder->when(in_array($invoiceType, [InvoiceType::SELL, InvoiceType::VOID], true),
+        $builder->when(
+            in_array($invoiceType, [InvoiceType::SELL, InvoiceType::VOID], true),
             fn ($q) => $q->with('latestMoadianHistory')
         );
 
@@ -150,23 +153,28 @@ class InvoiceController extends Controller
 
     private function applyInvoiceFilters(Builder $builder, Request $request, ?InvoiceType $invoiceType, bool $isServiceBuy): void
     {
-        $builder->when($invoiceType !== null,
+        $builder->when(
+            $invoiceType !== null,
             fn ($invoice) => $invoice->where('invoice_type', $invoiceType)
         );
 
-        $builder->when($request->filled('number'),
+        $builder->when(
+            $request->filled('number'),
             fn ($q) => $q->where('number', $request->number)
         );
 
-        $builder->when($request->filled('start_date'),
+        $builder->when(
+            $request->filled('start_date'),
             fn ($q) => $q->where('date', '>=', convertToGregorian($request->start_date))
         );
 
-        $builder->when($request->filled('end_date'),
+        $builder->when(
+            $request->filled('end_date'),
             fn ($q) => $q->where('date', '<=', convertToGregorian($request->end_date))
         );
 
-        $builder->when($request->filled('text'),
+        $builder->when(
+            $request->filled('text'),
             fn ($q) => $q->where(function ($invoice) use ($request) {
                 $invoice->whereHas('items', function ($items) use ($request) {
                     $items->where('description', 'like', "%{$request->text}%");
@@ -186,7 +194,8 @@ class InvoiceController extends Controller
 
         $builder->when($invoiceType === InvoiceType::SELL && $request->boolean('voided'), fn ($q) => $q->whereHas('voidInvoice'));
 
-        $builder->when($request->filled('moadian_status') && in_array($invoiceType, [InvoiceType::SELL, InvoiceType::VOID, InvoiceType::RETURN_SELL], true),
+        $builder->when(
+            $request->filled('moadian_status') && in_array($invoiceType, [InvoiceType::SELL, InvoiceType::VOID, InvoiceType::RETURN_SELL], true),
             function ($q) use ($request) {
                 if ($request->moadian_status === 'not_sent') {
                     $q->whereDoesntHave('moadianHistories');
@@ -333,6 +342,18 @@ class InvoiceController extends Controller
             ->with($msgType, $msg);
     }
 
+    public function importBuyCsv(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
+        ]);
+
+        $invoice = $this->invoiceCsvImportService->importBuyDraft($validated['csv_file'], $request->user());
+
+        return redirect()->route('invoices.show', $invoice)
+            ->with('success', __('Buy invoice imported as draft successfully.'));
+    }
+
     public function show(Invoice $invoice, PaymentService $paymentService)
     {
         $changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
@@ -375,13 +396,13 @@ class InvoiceController extends Controller
 
     public function print(Invoice $invoice)
     {
-        $invoice->load('customer', 'items');
+        $invoice->load('customer', 'items.itemable');
 
-        if (! $invoice->status->isApproved()) {
-            return view('invoices.draft', compact('invoice'));
-        }
-
-        $pdf = PDF::loadView('invoices.print', compact('invoice'));
+        $pdf = PDF::loadView('invoices.print', compact('invoice'), [], [
+            'format' => 'A5',
+            'orientation' => 'P',
+            'margin' => 5,
+        ]);
 
         return $pdf->stream('invoice-'.(formatDocumentNumber($invoice->number ?? $invoice->id)).'.pdf');
     }
@@ -640,45 +661,269 @@ class InvoiceController extends Controller
     public function searchProductService(Request $request)
     {
         $validated = $request->validate([
-            'q' => 'required|string|max:100',
+            'q' => ['required', 'string', 'max:100'],
         ]);
 
-        $q = $validated['q'];
+        $query = $this->normalizePersianText($validated['q']);
+
+        if ($query === '') {
+            return response()->json([]);
+        }
+
+        // If query is numeric, try to fetch by ID directly
+        if (ctype_digit($query)) {
+            $productId = (int) $query;
+            $product = Product::with('productGroup')->find($productId);
+            if ($product) {
+                return response()->json([
+                    ['id' => 'group_products', 'headerGroup' => 'product', 'options' => [
+                        $product->group ?? 0 => [[
+                            'id' => $product->id,
+                            'groupId' => $product->group ?? 0,
+                            'groupName' => $product->productGroup?->name ?? 'General',
+                            'text' => $product->name,
+                            'type' => 'product',
+                            'raw_data' => $product->toArray(),
+                        ]],
+                    ]],
+                ]);
+            }
+            $service = Service::with('serviceGroup')->find($productId);
+            if ($service) {
+                return response()->json([
+                    ['id' => 'group_services', 'headerGroup' => 'service', 'options' => [
+                        $service->group ?? 0 => [[
+                            'id' => $service->id,
+                            'groupId' => $service->group ?? 0,
+                            'groupName' => $service->serviceGroup?->name ?? 'General',
+                            'text' => $service->name,
+                            'type' => 'service',
+                            'raw_data' => $service->toArray(),
+                        ]],
+                    ]],
+                ]);
+            }
+        }
+
         $results = [];
 
         $searches = [
-            ['group' => ProductGroup::class, 'model' => Product::class, 'relation' => 'productGroup', 'id' => 'group_products', 'header' => 'product'],
-            ['group' => ServiceGroup::class, 'model' => Service::class, 'relation' => 'serviceGroup', 'id' => 'group_services', 'header' => 'service'],
+            [
+                'group' => ProductGroup::class,
+                'model' => Product::class,
+                'relation' => 'productGroup',
+                'id' => 'group_products',
+                'header' => 'product',
+            ],
+            [
+                'group' => ServiceGroup::class,
+                'model' => Service::class,
+                'relation' => 'serviceGroup',
+                'id' => 'group_services',
+                'header' => 'service',
+            ],
         ];
 
         foreach ($searches as $search) {
-            $items = $this->searchWithGroup($q, $search['group'], $search['model'], $search['relation']);
+            $items = $this->searchItemsWithGroup(
+                query: $query,
+                groupModel: $search['group'],
+                itemModel: $search['model'],
+                relation: $search['relation'],
+            );
 
-            if ($items->isNotEmpty()) {
-                $results[] = [
-                    'id' => $search['id'],
-                    'headerGroup' => $search['header'],
-                    'options' => $this->groupItems($items, $search['relation']),
-                ];
+            if ($items->isEmpty()) {
+                continue;
             }
+
+            $results[] = [
+                'id' => $search['id'],
+                'headerGroup' => $search['header'],
+                'options' => $this->groupItems(
+                    $items,
+                    $search['relation']
+                ),
+            ];
         }
 
         return response()->json($results);
     }
 
-    private function searchWithGroup(string $q, string $groupModel, string $itemModel, string $relation)
+    /**
+     * Search products/services by normalized Persian text.
+     *
+     * Handles:
+     * - ي -> ی
+     * - ك -> ک
+     * - multiple spaces
+     * - leading/trailing spaces
+     */
+    private function searchItemsWithGroup(
+        string $query,
+        string $groupModel,
+        string $itemModel,
+        string $relation
+    ) {
+
+        /*
+     * Normalize the query once more in case this method
+     * is called from somewhere else in the future.
+     */
+        $query = $this->normalizePersianText($query);
+
+        /*
+     * Convert spaces into a flexible pattern.
+     *
+     * Example:
+     * "وينستون   لايت"
+     *
+     * becomes:
+     * "وينستون لايت"
+     *
+     * and then each word is searched independently.
+     */
+        $words = preg_split('/\s+/u', $query, -1, PREG_SPLIT_NO_EMPTY);
+
+        if (empty($words)) {
+            return collect();
+        }
+
+        /*
+     * ---------------------------------------------------------
+     * 1. Search matching groups
+     * ---------------------------------------------------------
+     */
+        $groupQuery = $groupModel::query();
+
+        foreach ($words as $word) {
+            $normalizedWord = $this->normalizePersianText($word);
+
+            $groupQuery->where(function ($q) use ($normalizedWord) {
+                $q->where('name', 'like', "%{$normalizedWord}%")
+                    ->orWhereRaw(
+                        "REPLACE(REPLACE(REPLACE(name, N'ي', N'ی'), N'ك', N'ک'), N'  ', N' ') LIKE ?",
+                        ["%{$normalizedWord}%"]
+                    );
+            });
+        }
+
+        $groupIds = $groupQuery
+            ->limit(50)
+            ->pluck('id');
+
+        /*
+     * ---------------------------------------------------------
+     * 2. Search products/services by name
+     * ---------------------------------------------------------
+     */
+        $fromName = $itemModel::query()
+            ->with($relation)
+            ->where(function ($q) use ($words) {
+                foreach ($words as $word) {
+                    $normalizedWord = $this->normalizePersianText($word);
+
+                    $q->where(function ($subQuery) use ($normalizedWord) {
+                        $subQuery
+                            ->where('name', 'like', "%{$normalizedWord}%")
+                            ->orWhereRaw(
+                                "REPLACE(REPLACE(REPLACE(name, N'ي', N'ی'), N'ك', N'ک'), N'  ', N' ') LIKE ?",
+                                ["%{$normalizedWord}%"]
+                            );
+                    });
+                }
+            })
+            ->limit(30)
+            ->get();
+
+        /*
+     * ---------------------------------------------------------
+     * 3. Search products/services belonging to matching groups
+     * ---------------------------------------------------------
+     */
+        $fromGroups = collect();
+
+        if ($groupIds->isNotEmpty()) {
+            $fromGroups = $itemModel::query()
+                ->with($relation)
+                ->whereIn('group', $groupIds)
+                ->limit(30)
+                ->get();
+        }
+
+        /*
+     * ---------------------------------------------------------
+     * 4. Merge results and remove duplicates
+     * ---------------------------------------------------------
+     *
+     * Name matches are placed first.
+     * Group matches are added afterwards.
+     */
+        return $fromName
+            ->merge($fromGroups)
+            ->unique('id')
+            ->values();
+    }
+
+    /**
+     * Normalize Persian/Arabic text before searching.
+     *
+     * Examples:
+     *
+     * ي -> ی
+     * ك -> ک
+     *
+     * Also:
+     * - Converts Arabic Yeh to Persian Yeh
+     * - Converts Arabic Kaf to Persian Kaf
+     * - Converts NBSP to normal space
+     * - Removes zero-width characters
+     * - Converts multiple spaces to one space
+     * - Trims the final value
+     */
+    private function normalizePersianText(string $text): string
     {
-        $fields = ['id', 'name', 'group'];
+        $text = trim($text);
 
-        $groupMatches = $groupModel::where('name', 'like', "%{$q}%")->pluck('id');
+        if ($text === '') {
+            return '';
+        }
 
-        $fromGroups = $groupMatches->isNotEmpty()
-            ? $itemModel::with($relation)->whereIn('group', $groupMatches)->limit(30)->get($fields)
-            : collect();
+        /*
+     * Arabic/Persian character normalization.
+     */
+        $text = str_replace(
+            [
+                'ي',
+                'ى',
+                'ك',
+                '‌',  // Zero Width Non-Joiner
+                '‍',  // Zero Width Joiner
+                '‏',  // Right-to-Left Mark
+                "\u{00A0}", // Non-breaking space
+            ],
+            [
+                'ی',
+                'ی',
+                'ک',
+                '',
+                '',
+                '',
+                ' ',
+            ],
+            $text
+        );
 
-        $fromName = $itemModel::with($relation)->where('name', 'like', "%{$q}%")->limit(30)->get($fields);
+        /*
+     * Normalize all whitespace characters.
+     *
+     * Example:
+     * "وينستون    لايت"
+     * becomes:
+     * "وينستون لايت"
+     */
+        $text = preg_replace('/\s+/u', ' ', $text);
 
-        return $fromName->merge($fromGroups)->unique('id');
+        return trim($text);
     }
 
     private function groupItems($items, $relationName)

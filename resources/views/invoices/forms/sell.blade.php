@@ -162,7 +162,7 @@
                         <x-select-box url="{{ route('invoices.search-product-service') }}" :options="$options"
                             x-model="selectedValue" x-init="selectedValue = initItemSelection(transaction)"
                             placeholder="{{ __('Select Product/Service') }}"
-                            @selected="selectItem(transaction, $event.detail.type, $event.detail.id)"
+                            @selected="selectItem(transaction, $event.detail.type, $event.detail.id, $event.detail.raw_data); $nextTick(() => { const row = $el.closest('.transaction'); if (row) { const qty = row.querySelector('input[name*=&quot;[quantity]&quot;]'); if (qty) qty.focus(); } })"
                             hint='{!! $hint !!}' hint2='{!! $hint2 !!}' />
 
                         <x-input name="" x-bind:name="'transactions[' + index + '][product_id]'" x-bind:value="transaction.product_id || ''" hidden />
@@ -181,7 +181,9 @@
                             x-bind:disabled="!transaction.product_id" label_text_class="text-gray-500"
                             label_class="w-full" input_class="border-white"
                             x-on:input="transaction.quantity = $store.utils.cleanupNumber($event.target.value).split('.')[0]"
-                            x-effect="$el.value = $store.utils.localizeNumber(($store.utils.cleanupNumber(transaction.quantity).split('.')[0]) || '')">
+                            x-effect="$el.value = $store.utils.localizeNumber(($store.utils.cleanupNumber(transaction.quantity).split('.')[0]) || '')"
+                            x-on:focus="$el.select()"
+                            x-on:keydown.enter.prevent="$el.closest('.transaction').querySelector('input[name*=&quot;[unit]&quot;]').focus()">
                         </x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
@@ -210,7 +212,9 @@
                             x-bind:disabled="!transaction.product_id && !transaction.service_id"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
                             x-on:input="transaction.unit = $store.utils.convertToEnglish($event.target.value)"
-                            x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.unit))">
+                            x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.unit))"
+                            x-on:focus="$el.select()"
+                            x-on:keydown.enter.prevent="addTransaction(); setTimeout(() => { const rows = document.querySelectorAll('.transaction'); const last = rows[rows.length - 1]; if (last) { const sb = last.querySelector('[x-data*=searchSelect]'); if (sb) { const btn = sb.querySelector('button'); if (btn) btn.click(); } } }, 50)">
                         </x-text-input>
                     </div>
 
@@ -368,7 +372,7 @@
                     transaction.item_id = id ? `${type}-${id}` : '';
                     return id ? `${type}-${id}` : '';
                 },
-                selectItem(transaction, type, id) {
+                selectItem(transaction, type, id, raw_data) {
                     const isProduct = type === 'product';
                     transaction.product_id = isProduct ? id : null;
                     transaction.service_id = isProduct ? null : id;
@@ -376,6 +380,24 @@
                     transaction.item_id = `${type}-${id}`;
                     transaction.inventory_subject_id = isProduct ? this.getProductInventorySubjectId(
                         id) : null;
+
+                    if (raw_data) {
+                        if (isProduct) {
+                            const existingIndex = this.products.findIndex(p => p.id == id);
+                            if (existingIndex === -1) {
+                                this.products.push(raw_data);
+                            } else {
+                                this.products[existingIndex] = { ...this.products[existingIndex], ...raw_data };
+                            }
+                        } else {
+                            const existingIndex = this.services.findIndex(s => s.id == id);
+                            if (existingIndex === -1) {
+                                this.services.push(raw_data);
+                            } else {
+                                this.services[existingIndex] = { ...this.services[existingIndex], ...raw_data };
+                            }
+                        }
+                    }
 
                     const isEditable = !this.isEditing || transaction.unit == null || transaction.vat ==
                         null;

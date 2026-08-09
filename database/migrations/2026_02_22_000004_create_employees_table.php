@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('employees', function (Blueprint $table) {
             $table->increments('id');
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('company_id')->constrained()->noActionOnDelete();
             $table->string('code', 20)->unique()->comment('Personnel code');
 
             // Identity
@@ -59,7 +59,7 @@ return new class extends Migration
             $table->unsignedInteger('work_site_id');
             $table->unsignedInteger('contract_framework_id')->nullable();
             $table->unsignedInteger('work_shift_id');
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained()->noActionOnDelete();
 
             $table->string('device_id', 20)->nullable()->comment('Attendance device identification number');
             $table->boolean('is_active')->default(true);
@@ -67,14 +67,14 @@ return new class extends Migration
 
             $table->foreign('org_chart_id')
                 ->references('id')->on('org_charts')
-                ->nullOnDelete();
+                ->noActionOnDelete();
 
             $table->foreign('work_site_id')
                 ->references('id')->on('work_sites');
 
             $table->foreign('contract_framework_id')
                 ->references('id')->on('work_site_contracts')
-                ->nullOnDelete();
+                ->noActionOnDelete();
 
             $table->foreign('work_shift_id')
                 ->references('id')->on('work_shifts');

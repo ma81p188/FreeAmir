@@ -16,8 +16,8 @@ return new class extends Migration
                 $table->dropForeign('transactions_subject_id_foreign');
                 $table->dropForeign('transactions_document_id_foreign');
 
-                $table->foreign('subject_id')->references('id')->on('subjects')->cascadeOnDelete();
-                $table->foreign('document_id')->references('id')->on('documents')->cascadeOnDelete();
+                $table->foreign('subject_id')->references('id')->on('subjects')->noActionOnDelete();
+                $table->foreign('document_id')->references('id')->on('documents')->noActionOnDelete();
             });
         }
     }
@@ -28,8 +28,8 @@ return new class extends Migration
             $table->dropForeign('transactions_subject_id_foreign');
             $table->dropForeign('transactions_document_id_foreign');
 
-            $table->foreign('subject_id')->references('id')->on('subjects')->nullOnDelete();
-            $table->foreign('document_id')->references('id')->on('documents')->nullOnDelete();
+            $table->foreign('subject_id')->references('id')->on('subjects')->noActionOnDelete();
+            $table->foreign('document_id')->references('id')->on('documents')->noActionOnDelete();
         });
     }
 };

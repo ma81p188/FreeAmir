@@ -45,14 +45,14 @@ return new class extends Migration
         Schema::table('invoice_items', function (Blueprint $table) {
             $table->decimal('cost_at_time_of_sale', 18, 2)->nullable()->after('vat');
             $table->unsignedBigInteger('transaction_id');
-            $table->foreign('transaction_id')->references('id')->on('transactions')->onDelete('cascade');
+            $table->foreign('transaction_id')->references('id')->on('transactions')->noActionOnDelete();
 
             $table->dropColumn('cog_after');
             $table->dropColumn('quantity_at');
         });
 
         Schema::table('ancillary_cost_items', function (Blueprint $table) {
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('company_id')->constrained()->noActionOnDelete();
         });
     }
 };

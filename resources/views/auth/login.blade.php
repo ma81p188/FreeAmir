@@ -9,7 +9,7 @@
                     <h1 class="font-bold text-center">{{ __('Login') }}</h1>
                     <x-show-message-bags />
                     
-                    <x-text-input class="mt-1 w-full max-w-xs" title="{{ __('Email') }}" input_name="email" type="email" placeHolder="{{ __('Enter your email') }}" x-model="email" />
+                    <x-text-input class="mt-1 w-full max-w-xs" title="{{ __('Username') }}" input_name="email" type="text" placeHolder="{{ __('Enter your username') }}" x-model="email" />
                     <x-text-input class="mt-1 w-full max-w-xs" title="{{ __('Password') }}" input_name="password" type="password" placeHolder="{{ __('Enter your password') }}" />
                     <div class="flex items-center justify-between mt-4 pl-2">
                         <button type="submit" class="btn bg-blue-500 hover:bg-blue-600 text-white py-2 px-8 rounded">{{ __('Login') }}</button>

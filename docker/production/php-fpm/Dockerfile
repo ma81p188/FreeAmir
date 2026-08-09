@@ -18,6 +18,17 @@ FROM php:8.3-fpm AS builder
 
 LABEL maintainer="FreeAmir"
 
+# Install Microsoft ODBC Driver 18 + SQL Server PHP extensions
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
+        msodbcsql18 \
+        mssql-tools18 \
+        unixodbc-dev \
+    && pecl install sqlsrv pdo_sqlsrv \
+    && docker-php-ext-enable sqlsrv pdo_sqlsrv
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     unzip \
@@ -65,15 +76,22 @@ ARG APP_VERSION=nightly-local
 ENV APP_VERSION="${APP_VERSION}"
 
 # Runtime-only system libraries (compiled .so names, not -dev headers)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpng16-16 \
-    libonig5 \
-    libxml2 \
-    libicu76 \
-    libzip5 \
-    libpq5 \
-    libfcgi-bin \
-    procps \
+RUN apt-get update \
+    && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
+        libpng16-16 \
+        libonig5 \
+        libxml2 \
+        libicu76 \
+        libzip5 \
+        libpq5 \
+        libfcgi-bin \
+        procps \
+        msodbcsql18 \
+        mssql-tools18 \
+        unixodbc \
     && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install php-fpm health-check script

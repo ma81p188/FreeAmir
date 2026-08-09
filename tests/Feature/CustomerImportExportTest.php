@@ -237,4 +237,88 @@ class CustomerImportExportTest extends TestCase
         $this->assertDatabaseMissing('customers', ['name' => 'Good Row']);
         $this->assertDatabaseMissing('customers', ['name' => 'Bad Row']);
     }
+
+    public function test_import_with_c_code_and_c_name_headers(): void
+    {
+        $csv = "C_Code\tC_Name\n".
+            "00032\tقلعه شيخ\n".
+            "00057\tآقاي پلنگي\n";
+
+        $response = $this->actingAs($this->user)
+            ->post(route('customers.import.store'), ['file' => $this->upload($csv)]);
+
+        $response->assertRedirect(route('customers.index'));
+        $response->assertSessionHas('success');
+
+        $customer1 = Customer::where('name', 'قلعه شيخ')->first();
+        $this->assertNotNull($customer1);
+        $this->assertSame('00032', $customer1->code);
+
+        $customer2 = Customer::where('name', 'آقاي پلنگي')->first();
+        $this->assertNotNull($customer2);
+        $this->assertSame('00057', $customer2->code);
+    }
+
+    public function test_import_with_code_and_name_headers(): void
+    {
+        $csv = "code,name\n".
+            "00001,Test Customer 1\n".
+            "00002,Test Customer 2\n";
+
+        $response = $this->actingAs($this->user)
+            ->post(route('customers.import.store'), ['file' => $this->upload($csv)]);
+
+        $response->assertRedirect(route('customers.index'));
+        $response->assertSessionHas('success');
+
+        $customer1 = Customer::where('name', 'Test Customer 1')->first();
+        $this->assertNotNull($customer1);
+        $this->assertSame('00001', $customer1->code);
+
+        $customer2 = Customer::where('name', 'Test Customer 2')->first();
+        $this->assertNotNull($customer2);
+        $this->assertSame('00002', $customer2->code);
+    }
+
+    public function test_import_without_group_name_uses_default_group(): void
+    {
+        $csv = "code,name\n".
+            "00001,No Group Customer\n";
+
+        $response = $this->actingAs($this->user)
+            ->post(route('customers.import.store'), ['file' => $this->upload($csv)]);
+
+        $response->assertRedirect(route('customers.index'));
+        $response->assertSessionHas('success');
+
+        $customer = Customer::where('name', 'No Group Customer')->first();
+        $this->assertNotNull($customer);
+        $this->assertSame('00001', $customer->code);
+
+        // Should be in the default group.
+        $group = CustomerGroup::where('name', 'عمومی')->first();
+        $this->assertNotNull($group);
+        $this->assertSame($group->id, $customer->group_id);
+    }
+
+    public function test_import_with_tab_delimited_csv(): void
+    {
+        $csv = "C_Code\tC_Name\n".
+            "00032\tقلعه شيخ\n".
+            "00057\tآقاي پلنگي\n";
+
+        $response = $this->actingAs($this->user)
+            ->post(route('customers.import.store'), ['file' => $this->upload($csv)]);
+
+        $response->assertRedirect(route('customers.index'));
+        $response->assertSessionHas('success');
+
+        $customer1 = Customer::where('name', 'قلعه شيخ')->first();
+        $this->assertNotNull($customer1);
+        $this->assertSame('00032', $customer1->code);
+
+        $customer2 = Customer::where('name', 'آقاي پلنگي')->first();
+        $this->assertNotNull($customer2);
+        $this->assertSame('00057', $customer2->code);
+    }
 }

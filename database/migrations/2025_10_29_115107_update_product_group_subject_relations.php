@@ -19,10 +19,10 @@ return new class extends Migration
         }
 
         Schema::table('product_groups', function (Blueprint $table) {
-            $table->foreignId('sales_returns_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
-            $table->foreignId('cogs_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
-            $table->foreignId('inventory_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
-            $table->foreignId('income_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
+            $table->foreignId('sales_returns_subject_id')->nullable()->constrained('subjects')->noActionOnDelete();
+            $table->foreignId('cogs_subject_id')->nullable()->constrained('subjects')->noActionOnDelete();
+            $table->foreignId('inventory_subject_id')->nullable()->constrained('subjects')->noActionOnDelete();
+            $table->foreignId('income_subject_id')->nullable()->constrained('subjects')->noActionOnDelete();
         });
     }
 
@@ -34,7 +34,7 @@ return new class extends Migration
             $table->dropConstrainedForeignId('inventory_subject_id');
             $table->dropConstrainedForeignId('income_subject_id');
 
-            $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null');
+            $table->foreign('subject_id')->references('id')->on('subjects')->noActionOnDelete();
         });
     }
 };

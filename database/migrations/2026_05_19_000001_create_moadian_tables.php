@@ -21,7 +21,7 @@ return new class extends Migration
 
         Schema::create('moadian_histories', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('invoice_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('invoice_id')->constrained()->noActionOnDelete();
             $table->json('data');
             $table->timestamps();
         });

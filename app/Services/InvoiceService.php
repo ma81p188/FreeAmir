@@ -390,10 +390,13 @@ class InvoiceService
         $invoice->status = InvoiceStatus::UNAPPROVED;
 
         if ($invoice->document) {
-            DocumentService::deleteDocument($invoice->document_id);
+            $documentId = $invoice->document_id;
             $invoice->document_id = null;
+            $invoice->update();
+            DocumentService::deleteDocument($documentId);
+        } else {
+            $invoice->update();
         }
-        $invoice->update();
         self::unapproveAncillaryCostsOfInvoice($invoice);
         ProductService::subProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
         CostOfGoodsService::updateProductsAverageCost($invoice);
@@ -505,9 +508,11 @@ class InvoiceService
     {
         $conflicts = collect();
 
+        $sameTypeOnly = [$invoice->invoice_type->value];
+
         // Check for prior unapproved (BUY or SELL) invoices (soft rule - warning)
         if ($nextStatus->isApproved()) {
-            $prior = self::findConflictingUnapprovedInvoices($invoice, $productIds);
+            $prior = self::findConflictingUnapprovedInvoices($invoice, $productIds, $sameTypeOnly);
 
             if ($prior->isNotEmpty()) {
                 $conflicts->push([
@@ -517,8 +522,8 @@ class InvoiceService
             }
         }
 
-        // Check for subsequent approved invoices (BUY or SELL) (hard rule - error)
-        $subsequent = self::findConflictingInvoices($invoice, $productIds, $nextStatus);
+        // Check for subsequent approved invoices (same type only) (hard rule - error)
+        $subsequent = self::findConflictingInvoices($invoice, $productIds, $nextStatus, $sameTypeOnly);
 
         if ($subsequent->isNotEmpty()) {
             $conflicts->push([

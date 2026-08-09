@@ -16,8 +16,8 @@ return new class extends Migration
             $table->string('description', 200)->notNullable();
             $table->decimal('amount', 18, 2)->default(0);
             $table->date('date');
-            $table->foreignId('invoice_id')->constrained()->onDelete('cascade');
-            $table->foreignId('product_id')->constrained()->onDelete('cascade');
+            $table->foreignId('invoice_id')->constrained()->noActionOnDelete();
+            $table->foreignId('product_id')->constrained()->noActionOnDelete();
             $table->timestamps();
         });
     }

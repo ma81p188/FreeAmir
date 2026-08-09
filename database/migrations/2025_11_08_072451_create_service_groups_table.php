@@ -18,8 +18,8 @@ return new class extends Migration
             $table->unsignedBigInteger('subject_id')->nullable();
             $table->string('sstid')->nullable();
 
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
-            $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null');
+            $table->foreignId('company_id')->constrained()->noActionOnDelete();
+            $table->foreign('subject_id')->references('id')->on('subjects')->noActionOnDelete();
 
             $table->timestamps();
         });

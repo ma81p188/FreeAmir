@@ -21,8 +21,8 @@ class CreateBankAccountsTable extends Migration
             $table->string('bank_web_page')->nullable();
             $table->text('desc')->nullable();
 
-            $table->foreign('bank_id')->references('id')->on('banks')->onDelete('cascade');
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete()->after('bank_id');
+            $table->foreign('bank_id')->references('id')->on('banks')->noActionOnDelete();
+            $table->foreignId('company_id')->constrained()->noActionOnDelete()->after('bank_id');
 
             $table->unique(['number', 'company_id']);
             $table->timestamps(false);

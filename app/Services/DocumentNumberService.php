@@ -29,7 +29,7 @@ class DocumentNumberService
 
     private function getNumberGapStats(int $sampleLimit = 10): array
     {
-        $cursor = Document::query()->selectRaw('DISTINCT CAST(number AS INTEGER) AS number_int')
+        $cursor = Document::query()->selectRaw('DISTINCT CAST(number AS INT) AS number_int')
             ->whereNotNull('number')->orderBy('number_int')->cursor();
 
         $previousNumber = null;

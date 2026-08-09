@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Enums\SubjectType;
 use App\Models\Subject;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class SubjectSeeder extends Seeder
@@ -15,14 +14,12 @@ class SubjectSeeder extends Seeder
      *
      * `is_permanent` distinguishes balance-sheet subjects (assets, liabilities,
      * equity, memorandum/contingent) from income-statement subjects (revenue,
-     * expenses, COGS, sales returns/discounts). Non-permanent subjects are the
-     * ones that should reset each fiscal year and feed the profit calculation.
+     * expenses, COGS, sales returns/discounts).
      */
     public function run(?int $companyId = null): void
     {
         $companyId ??= (int) getActiveCompany();
-        // Root subjects classified as non-permanent (income statement / temporary).
-        // Their children inherit the same flag.
+
         $nonPermanentRoots = [
             2,   // 040 هزینه ها
             17,  // 062 خرید
@@ -60,7 +57,6 @@ class SubjectSeeder extends Seeder
             ['id' => 90, 'code' => '064', 'name' => 'حسابهای انتظامی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 93, 'code' => '065', 'name' => 'طرف حسابهای انتظامی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 97, 'code' => '066', 'name' => 'تخفیفات نقدی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
-
             ['id' => 102, 'code' => '070', 'name' => 'بهای تمام شده', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 105, 'code' => '070001', 'name' => 'بهای تمام شده کالا فروش رفته', 'parent_id' => 102, 'type' => 'both', 'company_id' => 1],
             ['id' => 106, 'code' => '070002', 'name' => 'بهای تمام شده خدمات', 'parent_id' => 102, 'type' => 'both', 'company_id' => 1],
@@ -146,48 +142,83 @@ class SubjectSeeder extends Seeder
             ['id' => 37, 'code' => '068001', 'name' => 'جاری شرکا', 'parent_id' => 8, 'type' => 'creditor', 'company_id' => 1],
         ];
 
-        // Mark every row with the inherited `is_permanent` based on its root ancestor.
+        /*
+         * Convert enum names to integer values and calculate is_permanent.
+         */
         $nonPermanentLookup = array_flip($nonPermanentRoots);
+
         foreach ($subjectData as &$row) {
             $rootId = $row['parent_id'] ?? $row['id'];
+
             $row['is_permanent'] = ! isset($nonPermanentLookup[$rootId]);
+
             $row['type'] = SubjectType::fromName($row['type'])->value;
         }
+
         unset($row);
 
-        if ($companyId !== 1) {
-            $subjectIds = [];
+        /*
+         * Template ID => Actual database ID
+         *
+         * We never insert the template `id` directly because `subjects.id`
+         * is an IDENTITY column in SQL Server.
+         */
+        $subjectIds = [];
 
-            foreach ($subjectData as $row) {
-                $templateId = $row['id'];
-                $templateParentId = $row['parent_id'];
+        foreach ($subjectData as $row) {
+            $templateId = $row['id'];
+            $templateParentId = $row['parent_id'];
 
-                unset($row['id']);
-                $row['company_id'] = $companyId;
+            /*
+             * Do not insert template ID into an IDENTITY column.
+             */
+            unset($row['id']);
 
-                if ($templateParentId !== null && ! isset($subjectIds[$templateParentId])) {
-                    throw new RuntimeException("Missing parent subject template [{$templateParentId}].");
+            /*
+             * Always use the requested company.
+             */
+            $row['company_id'] = $companyId;
+
+            /*
+             * Resolve parent_id from template ID to actual database ID.
+             */
+            if ($templateParentId !== null) {
+                if (! isset($subjectIds[$templateParentId])) {
+                    throw new RuntimeException(
+                        "Missing parent subject template [{$templateParentId}] for subject [{$templateId}]."
+                    );
                 }
 
-                $row['parent_id'] = $templateParentId === null
-                    ? null
-                    : $subjectIds[$templateParentId];
-
-                $subject = Subject::withoutGlobalScopes()->updateOrCreate(
-                    ['company_id' => $companyId, 'code' => $row['code']],
-                    $row,
-                );
-
-                $subjectIds[$templateId] = $subject->id;
+                $row['parent_id'] = $subjectIds[$templateParentId];
+            } else {
+                $row['parent_id'] = null;
             }
 
-            return;
-        }
+            /*
+             * Use company_id + code as the unique logical identity.
+             *
+             * This avoids:
+             * - IDENTITY_INSERT errors
+             * - SQL Server MERGE issues caused by explicit IDs
+             * - Problems when the seeder is executed more than once
+             */
+            $subject = Subject::withoutGlobalScopes()->updateOrCreate(
+                [
+                    'company_id' => $companyId,
+                    'code' => $row['code'],
+                ],
+                [
+                    'name' => $row['name'],
+                    'parent_id' => $row['parent_id'],
+                    'type' => $row['type'],
+                    'is_permanent' => $row['is_permanent'],
+                ],
+            );
 
-        DB::table('subjects')->upsert(
-            $subjectData,
-            ['id'],
-            ['code', 'name', 'parent_id', 'type', 'company_id', 'is_permanent']
-        );
+            /*
+             * Save actual database ID for children.
+             */
+            $subjectIds[$templateId] = $subject->id;
+        }
     }
 }

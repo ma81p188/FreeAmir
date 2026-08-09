@@ -17,11 +17,11 @@ class CreateInvoicesTable extends Migration
             $table->id();
             $table->string('number')->unique();
             $table->date('date');
-            $table->foreignId('creator_id')->nullable()->constrained('users')->onDelete('set null');
-            $table->foreignId('approver_id')->nullable()->constrained('users')->onDelete('set null');
-            $table->foreignId('document_id')->nullable()->constrained('documents')->onDelete('set null');
-            $table->foreignId('company_id')->nullable()->constrained('companies')->onDelete('set null');
-            $table->foreignId('customer_id')->constrained('customers')->onDelete('cascade');
+            $table->foreignId('creator_id')->nullable()->constrained('users')->noActionOnDelete();
+            $table->foreignId('approver_id')->nullable()->constrained('users')->noActionOnDelete();
+            $table->foreignId('document_id')->nullable()->constrained('documents')->noActionOnDelete();
+            $table->foreignId('company_id')->nullable()->constrained('companies')->noActionOnDelete();
+            $table->foreignId('customer_id')->constrained('customers')->noActionOnDelete();
             $table->decimal('addition', 16, 2);
             $table->decimal('subtraction', 16, 2);
             $table->decimal('vat', 16, 2);

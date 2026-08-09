@@ -9,37 +9,37 @@ return new class extends Migration
     {
         Schema::table('invoices', function (Blueprint $table) {
             $table->dropForeign(['company_id']);
-            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
+            $table->foreign('company_id')->references('id')->on('companies')->noActionOnDelete();
         });
 
         Schema::table('invoice_items', function (Blueprint $table) {
             $table->dropForeign(['invoice_id']);
-            $table->foreign('invoice_id')->references('id')->on('invoices')->onDelete('cascade');
+            $table->foreign('invoice_id')->references('id')->on('invoices')->noActionOnDelete();
         });
 
         Schema::table('documents', function (Blueprint $table) {
             $table->dropForeign(['company_id']);
-            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
+            $table->foreign('company_id')->references('id')->on('companies')->noActionOnDelete();
         });
 
         Schema::table('salary_decrees', function (Blueprint $table) {
             $table->dropForeign(['employee_id']);
-            $table->foreign('employee_id')->references('id')->on('employees')->onDelete('cascade');
+            $table->foreign('employee_id')->references('id')->on('employees')->noActionOnDelete();
         });
 
         Schema::table('payrolls', function (Blueprint $table) {
             $table->dropForeign(['employee_id']);
-            $table->foreign('employee_id')->references('id')->on('employees')->onDelete('cascade');
+            $table->foreign('employee_id')->references('id')->on('employees')->noActionOnDelete();
         });
 
         Schema::table('personnel_requests', function (Blueprint $table) {
             $table->dropForeign(['employee_id']);
-            $table->foreign('employee_id')->references('id')->on('employees')->onDelete('cascade');
+            $table->foreign('employee_id')->references('id')->on('employees')->noActionOnDelete();
         });
 
         Schema::table('document_files', function (Blueprint $table) {
             $table->dropForeign(['document_id']);
-            $table->foreign('document_id')->references('id')->on('documents')->onDelete('cascade');
+            $table->foreign('document_id')->references('id')->on('documents')->noActionOnDelete();
         });
     }
 
@@ -47,17 +47,17 @@ return new class extends Migration
     {
         Schema::table('invoices', function (Blueprint $table) {
             $table->dropForeign(['company_id']);
-            $table->foreign('company_id')->references('id')->on('companies')->nullOnDelete();
+            $table->foreign('company_id')->references('id')->on('companies')->noActionOnDelete();
         });
 
         Schema::table('invoice_items', function (Blueprint $table) {
             $table->dropForeign(['invoice_id']);
-            $table->foreign('invoice_id')->references('id')->on('invoices')->nullOnDelete();
+            $table->foreign('invoice_id')->references('id')->on('invoices')->noActionOnDelete();
         });
 
         Schema::table('documents', function (Blueprint $table) {
             $table->dropForeign(['company_id']);
-            $table->foreign('company_id')->references('id')->on('companies')->nullOnDelete();
+            $table->foreign('company_id')->references('id')->on('companies')->noActionOnDelete();
         });
 
         Schema::table('salary_decrees', function (Blueprint $table) {
@@ -77,7 +77,7 @@ return new class extends Migration
 
         Schema::table('document_files', function (Blueprint $table) {
             $table->dropForeign(['document_id']);
-            $table->foreign('document_id')->references('id')->on('documents')->nullOnDelete();
+            $table->foreign('document_id')->references('id')->on('documents')->noActionOnDelete();
         });
     }
 };

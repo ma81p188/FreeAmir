@@ -26,9 +26,9 @@ class CreateInvoiceItemsTable extends Migration
             $table->text('description')->nullable();
             $table->timestamps();
 
-            $table->foreign('invoice_id')->references('id')->on('invoices')->onDelete('set null'); // Assuming invoices model is named InvoiceTable
-            $table->foreign('product_id')->references('id')->on('products')->onDelete('set null');
-            $table->foreign('transaction_id')->references('id')->on('transactions')->onDelete('set null'); // Assuming invoices model is named InvoiceTable
+            $table->foreign('invoice_id')->references('id')->on('invoices')->noActionOnDelete(); // Assuming invoices model is named InvoiceTable
+            $table->foreign('product_id')->references('id')->on('products')->noActionOnDelete();
+            $table->foreign('transaction_id')->references('id')->on('transactions')->noActionOnDelete(); // Assuming invoices model is named InvoiceTable
         });
     }
 

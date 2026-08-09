@@ -20,7 +20,7 @@ class LoginController extends Controller
         $this->normalizeEmail($request);
 
         $credentials = $request->validate([
-            'email' => ['required', 'email'],
+            'email' => ['required', 'string'],
             'password' => ['required'],
         ]);
 

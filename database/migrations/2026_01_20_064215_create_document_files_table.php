@@ -18,8 +18,8 @@ return new class extends Migration
             $table->string('title')->nullable();
             $table->string('name');
             $table->string('path');
-            $table->foreign('document_id')->references('id')->on('documents')->onDelete('set null');
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('document_id')->references('id')->on('documents')->noActionOnDelete();
+            $table->foreign('user_id')->references('id')->on('users')->noActionOnDelete();
             $table->timestamps();
         });
     }

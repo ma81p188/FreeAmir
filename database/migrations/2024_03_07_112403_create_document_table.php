@@ -8,7 +8,6 @@ class CreateDocumentTable extends Migration
 {
     public function up()
     {
-        // Create the bill table
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
             $table->decimal('number', 16, 2)->nullable();
@@ -16,9 +15,20 @@ class CreateDocumentTable extends Migration
             $table->date('date')->nullable();
             $table->date('approved_at')->nullable();
 
-            $table->foreignId('creator_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('approver_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('creator_id')
+                ->nullable()
+                ->constrained('users')
+                ->noActionOnDelete();
+
+            $table->foreignId('approver_id')
+                ->nullable()
+                ->constrained('users')
+                ->noActionOnDelete();
+
+            $table->foreignId('company_id')
+                ->nullable()
+                ->constrained('companies')
+                ->noActionOnDelete();
 
             $table->timestamps();
         });

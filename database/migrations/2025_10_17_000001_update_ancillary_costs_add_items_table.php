@@ -27,8 +27,8 @@ return new class extends Migration
 
         Schema::create('ancillary_cost_items', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('ancillary_cost_id')->constrained()->onDelete('cascade');
-            $table->foreignId('product_id')->constrained()->onDelete('cascade');
+            $table->foreignId('ancillary_cost_id')->constrained()->noActionOnDelete();
+            $table->foreignId('product_id')->constrained()->noActionOnDelete();
             $table->enum('type', $this->enumValues);
             $table->decimal('amount', 18, 2)->default(0);
             $table->decimal('vat', 18, 2)->default(0);
@@ -44,7 +44,7 @@ return new class extends Migration
 
         Schema::table('ancillary_costs', function (Blueprint $table) {
             $table->dropColumn('vat');
-            $table->foreignId('product_id')->after('invoice_id')->constrained()->onDelete('cascade');
+            $table->foreignId('product_id')->after('invoice_id')->constrained()->noActionOnDelete();
         });
     }
 };

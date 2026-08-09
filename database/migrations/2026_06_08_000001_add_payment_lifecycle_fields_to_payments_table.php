@@ -9,9 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('payments', function (Blueprint $table) {
-            $table->foreignId('document_id')->nullable()->after('amount')->constrained('documents')->nullOnDelete();
-            $table->foreignId('creator_id')->nullable()->after('document_id')->constrained('users')->nullOnDelete();
-            $table->foreignId('settlement_subject_id')->nullable()->after('document_id')->constrained('subjects')->nullOnDelete();
+            $table->foreignId('document_id')->nullable()->after('amount')->constrained('documents')->noActionOnDelete();
+            $table->foreignId('creator_id')->nullable()->after('document_id')->constrained('users')->noActionOnDelete();
+            $table->foreignId('settlement_subject_id')->nullable()->after('document_id')->constrained('subjects')->noActionOnDelete();
 
             $table->decimal('amount', 18, 2)->change();
             $table->date('date');
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->dropConstrainedForeignId('company_id');
             $table->dropForeign(['invoice_id']);
             $table->foreignId('invoice_id')->nullable(false)->change();
-            $table->foreign('invoice_id')->references('id')->on('invoices')->cascadeOnDelete();
+            $table->foreign('invoice_id')->references('id')->on('invoices')->noActionOnDelete();
         });
     }
 
@@ -38,9 +38,9 @@ return new class extends Migration
 
             $table->dropForeign(['invoice_id']);
             $table->foreignId('invoice_id')->nullable()->change();
-            $table->foreign('invoice_id')->references('id')->on('invoices')->nullOnDelete();
+            $table->foreign('invoice_id')->references('id')->on('invoices')->noActionOnDelete();
 
-            $table->foreignId('company_id')->after('invoice_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignId('company_id')->after('invoice_id')->nullable()->constrained()->noActionOnDelete();
 
             $table->dropConstrainedForeignId('document_id');
             $table->dropConstrainedForeignId('creator_id');

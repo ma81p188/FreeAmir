@@ -4,31 +4,45 @@ namespace Database\Seeders;
 
 use App\Models\Company;
 use App\Models\User;
+use App\Support\SqlServerIdentityInsert;
 use Illuminate\Database\Seeder;
 use RuntimeException;
 
 class CompanySeeder extends Seeder
 {
+    use SqlServerIdentityInsert;
+
     public function run(): void
     {
         $companyId = (int) getActiveCompany();
         $fiscalYear = jdate('Y', tr_num: 'en');
 
-        $company = $companyId === 1 ? Company::updateOrCreate(['id' => $companyId], [
-            'id' => $companyId,
-            'name' => 'نام شرکت',
-            'fiscal_year' => $fiscalYear,
-        ]) : Company::find($companyId);
+        if ($companyId === 1) {
+            $company = $this->withIdentityInsert('companies', function () use ($companyId, $fiscalYear) {
+                return Company::updateOrCreate(
+                    ['id' => $companyId],
+                    [
+                        'name' => 'نام شرکت',
+                        'fiscal_year' => $fiscalYear,
+                    ]
+                );
+            });
 
-        if (! $company) {
-            throw new RuntimeException("Company with ID {$companyId} does not exist.");
+            $users = User::all();
+
+            foreach ($users as $user) {
+                $user->companies()->syncWithoutDetaching([
+                    $company->id,
+                ]);
+            }
+        } else {
+            $company = Company::find($companyId);
         }
 
-        if ($companyId === 1) {
-            $users = User::all();
-            foreach ($users as $user) {
-                $user->companies()->syncWithoutDetaching([$company->id]);
-            }
+        if (! $company) {
+            throw new RuntimeException(
+                "Company with ID {$companyId} does not exist."
+            );
         }
     }
 }

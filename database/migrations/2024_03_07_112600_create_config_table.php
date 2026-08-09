@@ -15,7 +15,7 @@ return new class extends Migration
             $table->text('desc')->nullable();
             $table->string('type');
             $table->string('category');
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('company_id')->constrained()->noActionOnDelete();
             $table->unique(['key', 'company_id']);
         });
     }

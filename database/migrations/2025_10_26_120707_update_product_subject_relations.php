@@ -1,3 +1,4 @@
+```php
 <?php
 
 use App\Support\SqliteSchemaHelper;
@@ -19,9 +20,20 @@ return new class extends Migration
         }
 
         Schema::table('products', function (Blueprint $table) {
-            $table->foreignId('sales_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
-            $table->foreignId('cogs_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
-            $table->foreignId('inventory_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
+            $table->foreignId('sales_subject_id')
+                ->nullable()
+                ->constrained('subjects')
+                ->noActionOnDelete();
+
+            $table->foreignId('cogs_subject_id')
+                ->nullable()
+                ->constrained('subjects')
+                ->noActionOnDelete();
+
+            $table->foreignId('inventory_subject_id')
+                ->nullable()
+                ->constrained('subjects')
+                ->noActionOnDelete();
         });
     }
 
@@ -32,7 +44,10 @@ return new class extends Migration
             $table->dropConstrainedForeignId('cogs_subject_id');
             $table->dropConstrainedForeignId('inventory_subject_id');
 
-            $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null');
+            $table->foreign('subject_id')
+                ->references('id')
+                ->on('subjects')
+                ->noActionOnDelete();
         });
     }
 };

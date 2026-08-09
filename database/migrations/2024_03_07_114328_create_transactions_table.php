@@ -17,14 +17,14 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('subject_id')->nullable();
             $table->unsignedBigInteger('document_id')->nullable();
-            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained('users')->noActionOnDelete();
 
             $table->string('desc', 500)->nullable();
             $table->decimal('value', 14, 2);
             $table->timestamps();
 
-            $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null');
-            $table->foreign('document_id')->references('id')->on('documents')->onDelete('set null');
+            $table->foreign('subject_id')->references('id')->on('subjects')->noActionOnDelete();
+            $table->foreign('document_id')->references('id')->on('documents')->noActionOnDelete();
         });
     }
 

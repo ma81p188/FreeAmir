@@ -19,6 +19,7 @@ class CustomerImportService
      * and of extra columns it does not recognise.
      */
     public const COLUMNS = [
+        'code',
         'name',
         'group_name',
         'subject_code',
@@ -45,9 +46,18 @@ class CustomerImportService
         'acc_bank_2',
     ];
 
+    /**
+     * Header aliases: maps alternative header names to canonical column names.
+     * Used to support CSV files with non-standard headers (e.g., C_Code, C_Name).
+     */
+    private const HEADER_ALIASES = [
+        'c_code' => 'code',
+        'c_name' => 'name',
+    ];
+
     /** Customer fields copied straight from the CSV row (no special handling). */
     private const PLAIN_FIELDS = [
-        'phone', 'mobile', 'fax', 'address', 'postal_code', 'email', 'ecnmcs_code',
+        'code', 'phone', 'mobile', 'fax', 'address', 'postal_code', 'email', 'ecnmcs_code',
         'personal_code', 'web_page', 'responsible', 'connector', 'desc', 'credit',
         'disc_rate', 'acc_name_1', 'acc_no_1', 'acc_bank_1', 'acc_name_2',
         'acc_no_2', 'acc_bank_2',
@@ -89,6 +99,7 @@ class CustomerImportService
             $updated = 0;
             $groupsCreated = 0;
             $groupCache = [];
+            $defaultGroup = null;
 
             foreach ($rows as $index => $row) {
                 // Human-friendly line number: +1 for the header row, +1 for 0-based index.
@@ -97,30 +108,46 @@ class CustomerImportService
                 $name = trim((string) ($row['name'] ?? ''));
                 $groupName = trim((string) ($row['group_name'] ?? ''));
                 $subjectCode = $this->normalizeCode($row['subject_code'] ?? null);
+                $code = trim((string) ($row['code'] ?? ''));
 
                 if ($name === '') {
                     throw ValidationException::withMessages(['file' => __('Line :line: customer name is required.', ['line' => $line])]);
                 }
 
+                // If no group_name is provided, use or create a default group.
                 if ($groupName === '') {
-                    throw ValidationException::withMessages(['file' => __('Line :line: group name is required.', ['line' => $line])]);
-                }
+                    if (! $defaultGroup) {
+                        $defaultGroup = CustomerGroup::with('subject')->where('name', 'عمومی')->first();
 
-                // 1. Resolve the group: reuse an existing one with the same name, otherwise create it.
-                $group = $groupCache[$groupName] ?? null;
+                        if (! $defaultGroup) {
+                            $defaultGroup = $this->customerGroupService->create([
+                                'name' => 'عمومی',
+                                'company_id' => $companyId,
+                            ]);
+                            $groupsCreated++;
+                        }
 
-                if (! $group) {
-                    $group = CustomerGroup::with('subject')->where('name', $groupName)->first();
-
-                    if (! $group) {
-                        $group = $this->customerGroupService->create([
-                            'name' => $groupName,
-                            'company_id' => $companyId,
-                        ]);
-                        $groupsCreated++;
+                        $groupCache['عمومی'] = $defaultGroup;
                     }
 
-                    $groupCache[$groupName] = $group;
+                    $group = $defaultGroup;
+                } else {
+                    // 1. Resolve the group: reuse an existing one with the same name, otherwise create it.
+                    $group = $groupCache[$groupName] ?? null;
+
+                    if (! $group) {
+                        $group = CustomerGroup::with('subject')->where('name', $groupName)->first();
+
+                        if (! $group) {
+                            $group = $this->customerGroupService->create([
+                                'name' => $groupName,
+                                'company_id' => $companyId,
+                            ]);
+                            $groupsCreated++;
+                        }
+
+                        $groupCache[$groupName] = $group;
+                    }
                 }
 
                 $group->loadMissing('subject');
@@ -128,7 +155,7 @@ class CustomerImportService
                 if (! $group->subject) {
                     throw ValidationException::withMessages(['file' => __('Line :line: could not resolve the accounting subject for group ":group".', [
                         'line' => $line,
-                        'group' => $groupName,
+                        'group' => $groupName ?: 'عمومی',
                     ])]);
                 }
 
@@ -142,7 +169,7 @@ class CustomerImportService
                         throw ValidationException::withMessages(['file' => __('Line :line: subject code :code is not a child of group ":group" subject :parent.', [
                             'line' => $line,
                             'code' => formatCode($subjectCode),
-                            'group' => $groupName,
+                            'group' => $groupName ?: 'عمومی',
                             'parent' => formatCode($group->subject->code),
                         ])]);
                     }
@@ -158,7 +185,15 @@ class CustomerImportService
                     'type' => $this->normalizeType($row['type'] ?? null)->value,
                 ];
 
+                // Add code if provided.
+                if ($code !== '') {
+                    $data['code'] = $code;
+                }
+
                 foreach (self::PLAIN_FIELDS as $field) {
+                    if ($field === 'code') {
+                        continue; // Already handled above.
+                    }
                     $value = $row[$field] ?? null;
                     if ($value !== null && trim((string) $value) !== '') {
                         $data[$field] = trim((string) $value);
@@ -202,7 +237,7 @@ class CustomerImportService
                             throw ValidationException::withMessages(['file' => __('Line :line: a customer named ":name" already exists in group ":group".', [
                                 'line' => $line,
                                 'name' => $name,
-                                'group' => $groupName,
+                                'group' => $groupName ?: 'عمومی',
                             ])]);
                         }
 
@@ -243,7 +278,12 @@ class CustomerImportService
         fwrite($handle, $contents);
         rewind($handle);
 
-        $header = fgetcsv($handle);
+        // Auto-detect delimiter from the first line.
+        $firstLine = fgets($handle);
+        $delimiter = $this->detectDelimiter($firstLine);
+        rewind($handle);
+
+        $header = fgetcsv($handle, 0, $delimiter);
 
         if ($header === false || $header === null) {
             fclose($handle);
@@ -254,19 +294,21 @@ class CustomerImportService
         $map = [];
         foreach ($header as $position => $label) {
             $key = strtolower(trim((string) $label));
+            // Check for header aliases (e.g., C_Code -> code, C_Name -> name).
+            $key = self::HEADER_ALIASES[$key] ?? $key;
             if (in_array($key, self::COLUMNS, true)) {
                 $map[$key] = $position;
             }
         }
 
-        if (! isset($map['name'], $map['group_name'])) {
+        if (! isset($map['name'])) {
             fclose($handle);
 
-            throw ValidationException::withMessages(['file' => __('The import file must contain at least "name" and "group_name" columns.')]);
+            throw ValidationException::withMessages(['file' => __('The import file must contain at least a "name" column.')]);
         }
 
         $rows = [];
-        while (($cols = fgetcsv($handle)) !== false) {
+        while (($cols = fgetcsv($handle, 0, $delimiter)) !== false) {
             // Skip fully blank lines.
             if (count(array_filter($cols, fn ($c) => trim((string) $c) !== '')) === 0) {
                 continue;
@@ -282,6 +324,23 @@ class CustomerImportService
         fclose($handle);
 
         return $rows;
+    }
+
+    /**
+     * Detect CSV delimiter from the first line of the file.
+     */
+    private function detectDelimiter(string $line): string
+    {
+        $delimiters = ["\t", ',', ';', '|'];
+        $results = [];
+
+        foreach ($delimiters as $delimiter) {
+            $results[$delimiter] = count(str_getcsv($line, $delimiter));
+        }
+
+        arsort($results);
+
+        return array_key_first($results);
     }
 
     private function readContents(UploadedFile|string $file): string

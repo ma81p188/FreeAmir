@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('ancillary_costs', function (Blueprint $table) {
-            $table->foreignId('document_id')->nullable()->constrained('documents')->onDelete('set null');
+            $table->foreignId('document_id')->nullable()->constrained('documents')->noActionOnDelete();
         });
     }
 

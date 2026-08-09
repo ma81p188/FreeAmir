@@ -16,8 +16,11 @@ class SubjectService
     public function buildSubjectTreeFromCollection(Collection $subjects): array
     {
         $rootKey = 'root';
+
         $grouped = $subjects->groupBy(function ($subject) use ($rootKey) {
-            return empty($subject->parent_id) ? $rootKey : (string) $subject->parent_id;
+            return empty($subject->parent_id)
+                ? $rootKey
+                : (string) $subject->parent_id;
         });
 
         $buildTree = function (string $parentKey) use (&$buildTree, $grouped): array {
@@ -37,9 +40,18 @@ class SubjectService
         return $buildTree($rootKey);
     }
 
-    public function buildSubjectTreeForRootSelection(?int $selectedRootId, int $maxRoots = 5): array
-    {
-        $roots = Subject::whereIsRoot()->orderBy('code')->get(['id', 'name', 'code', 'parent_id']);
+    public function buildSubjectTreeForRootSelection(
+        ?int $selectedRootId,
+        int $maxRoots = 5
+    ): array {
+        $roots = Subject::whereIsRoot()
+            ->orderBy('code')
+            ->get([
+                'id',
+                'name',
+                'code',
+                'parent_id',
+            ]);
 
         if ($roots->isEmpty()) {
             return [];
@@ -50,8 +62,12 @@ class SubjectService
         } else {
             $selectedRoots = $roots->take($maxRoots);
 
-            if ($selectedRootId && ! $selectedRoots->contains('id', $selectedRootId)) {
+            if (
+                $selectedRootId &&
+                ! $selectedRoots->contains('id', $selectedRootId)
+            ) {
                 $selectedRoots = $roots->take(max($maxRoots - 1, 0));
+
                 $selectedRoot = $roots->firstWhere('id', $selectedRootId)
                     ?? Subject::find($selectedRootId);
 
@@ -61,29 +77,57 @@ class SubjectService
             }
         }
 
-        $rootCodes = $selectedRoots->pluck('code')->unique()->values();
+        $rootCodes = $selectedRoots
+            ->pluck('code')
+            ->unique()
+            ->values();
 
         if ($rootCodes->isEmpty()) {
             return [];
         }
 
-        $subjects = Subject::query()->select(['id', 'name', 'code', 'parent_id'])
+        $subjects = Subject::query()
+            ->select([
+                'id',
+                'name',
+                'code',
+                'parent_id',
+            ])
             ->where(function ($query) use ($rootCodes) {
                 foreach ($rootCodes as $code) {
-                    $query->orWhere('code', 'like', $code.'%');
+                    $query->orWhere('code', 'like', $code . '%');
                 }
-            })->orderBy('code')->get();
+            })
+            ->orderBy('code')
+            ->get();
 
         return $this->buildSubjectTreeFromCollection($subjects);
     }
 
+
     public function sumSubjectWithDateRange(?Subject $subject)
     {
         if (is_null($subject)) {
-            return [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0, 9 => 0, 10 => 0, 11 => 0, 12 => 0];
+            return [
+                1 => 0,
+                2 => 0,
+                3 => 0,
+                4 => 0,
+                5 => 0,
+                6 => 0,
+                7 => 0,
+                8 => 0,
+                9 => 0,
+                10 => 0,
+                11 => 0,
+                12 => 0,
+            ];
         }
 
-        $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
+        $year = (int) (
+            config('active-company-fiscal-year')
+            ?? toEnglish(jdate('Y'))
+        );
 
         $months = [
             1 => [1, 31],
@@ -100,44 +144,83 @@ class SubjectService
             12 => [1, jcheckdate(12, 30, $year) ? 30 : 29],
         ];
 
+        // همه زیرمجموعه‌های این Subject
         $subjectIds = $subject->getAllDescendantIds();
-        $transactionQuery = Transaction::query()->whereIn('subject_id', $subjectIds);
-        $monthlySum = [];
+
+        // اگر خود Subject در لیست نبود، اضافه‌اش کن
+        if (! in_array($subject->id, $subjectIds)) {
+            $subjectIds[] = $subject->id;
+        }
+
+        $transactionQuery = Transaction::query()
+            ->whereIn('transactions.subject_id', $subjectIds);
+
+        // مقدار پیش‌فرض برای تمام ماه‌ها
+        $monthlySum = array_fill(1, 12, 0);
 
         foreach ($months as $month => [$startDay, $endDay]) {
-            $startDate = jalali_to_gregorian($year, $month, $startDay, '-');
-            $endDate = jalali_to_gregorian($year, $month, $endDay, '-');
+            $startDate = jalali_to_gregorian(
+                $year,
+                $month,
+                $startDay,
+                '-'
+            );
 
-            $transactions = (clone $transactionQuery)
-                ->join('documents', 'documents.id', '=', 'transactions.document_id')
-                ->whereBetween('documents.date', [$startDate, $endDate])
-                ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
-                ->groupBy('date')
-                ->orderBy('date')
-                ->pluck('total', 'date')
-                ->map(fn ($v) => (int) $v);
+            $endDate = jalali_to_gregorian(
+                $year,
+                $month,
+                $endDay,
+                '-'
+            );
 
-            foreach ($transactions as $date => $total) {
-                $monthlySum[$month] = ($monthlySum[$month] ?? 0) + $total;
-            }
+            $total = (clone $transactionQuery)
+                ->join(
+                    'documents',
+                    'documents.id',
+                    '=',
+                    'transactions.document_id'
+                )
+                ->whereDate(
+                    'documents.date',
+                    '>=',
+                    $startDate
+                )
+                ->whereDate(
+                    'documents.date',
+                    '<=',
+                    $endDate
+                )
+                ->sum('transactions.value');
+
+            $monthlySum[$month] = (int) $total;
         }
 
         return $monthlySum;
     }
 
     /**
-     * Calculate the total sum of transactions for a subject with all its descendants recursively.
+     * Calculate the total sum of transactions for a subject
+     * with all its descendants recursively.
      */
-    public static function sumSubject(string|int|Subject|null $code, bool $both = true, bool $debit = false): float
-    {
+    public static function sumSubject(
+        string|int|Subject|null $code,
+        bool $both = true,
+        bool $debit = false
+    ): float {
         if (is_null($code)) {
             return 0;
         } elseif ($code instanceof Subject) {
-            $subject = $code->loadMissing(['transactions']);
+            $subject = $code->loadMissing([
+                'transactions',
+            ]);
         } elseif (is_int($code)) {
-            $subject = Subject::with(['transactions'])->find($code);
+            $subject = Subject::with([
+                'transactions',
+            ])->find($code);
         } else {
-            $subject = Subject::with(['transactions'])->where('code', $code)->first();
+            $subject = Subject::with([
+                'transactions',
+            ])->where('code', $code)->first();
         }
 
         if (! $subject) {
@@ -146,40 +229,64 @@ class SubjectService
 
         self::eagerLoadDescendants($subject);
 
-        return self::sumSubjectRecursively($subject, $both, $debit);
+        return self::sumSubjectRecursively(
+            $subject,
+            $both,
+            $debit
+        );
     }
 
     /**
-     * Recursively sum transactions for a subject and all its descendants
+     * Recursively sum transactions for a subject
+     * and all its descendants.
      */
-    private static function sumSubjectRecursively(Subject $subject, bool $both, bool $debit): float
-    {
+    private static function sumSubjectRecursively(
+        Subject $subject,
+        bool $both,
+        bool $debit
+    ): float {
         $sum = 0.0;
+
         if ($both) {
             $sum = $subject->transactions->sum('value');
         } elseif ($debit) {
-            $sum = $subject->transactions->where('value', '<', 0)->sum('value');
+            $sum = $subject->transactions
+                ->where('value', '<', 0)
+                ->sum('value');
         } else {
-            $sum = $subject->transactions->where('value', '>', 0)->sum('value');
+            $sum = $subject->transactions
+                ->where('value', '>', 0)
+                ->sum('value');
         }
 
-        $children = $subject->children()->with('transactions')->get();
+        $children = $subject->children()
+            ->with('transactions')
+            ->get();
+
         /** @var Subject $child */
         foreach ($children as $child) {
-            $sum += self::sumSubjectRecursively($child, $both, $debit);
+            $sum += self::sumSubjectRecursively(
+                $child,
+                $both,
+                $debit
+            );
         }
 
         return $sum;
     }
 
     /**
-     * Recursively eager-load all descendants with their transactions.
+     * Recursively eager-load all descendants
+     * with their transactions.
      */
-    private static function eagerLoadDescendants(Subject $subject): void
-    {
-        $subject->loadMissing(['children' => function ($query) {
-            $query->with('transactions');
-        }]);
+    private static function eagerLoadDescendants(
+        Subject $subject
+    ): void {
+        $subject->loadMissing([
+            'children' => function ($query) {
+                $query->with('transactions');
+            },
+        ]);
 
         foreach ($subject->children as $child) {
             self::eagerLoadDescendants($child);
@@ -196,42 +303,85 @@ class SubjectService
     public function createSubject(array $data): Subject
     {
         $name = $data['name'] ?? null;
+
         if (! $name) {
-            throw new \InvalidArgumentException('The name field is required.');
+            throw new \InvalidArgumentException(
+                'The name field is required.'
+            );
         }
 
         $parentId = $data['parent_id'] ?? null;
+
         if ($parentId === '' || $parentId === 0) {
-            $parentId = null; // normalize to null for roots
+            $parentId = null;
         }
 
         $companyId = $data['company_id'] ?? getActiveCompany();
+
         if (! $companyId) {
-            throw new \InvalidArgumentException('The company_id is required or must be available in session.');
+            throw new \InvalidArgumentException(
+                'The company_id is required or must be available in session.'
+            );
         }
 
         $parentSubject = null;
+
         if ($parentId !== null) {
-            $parentSubject = Subject::withoutGlobalScopes()->where('company_id', $companyId)->find($parentId);
+            $parentSubject = Subject::withoutGlobalScopes()
+                ->where('company_id', $companyId)
+                ->find($parentId);
 
             if (! $parentSubject) {
-                throw new \InvalidArgumentException(__('Parent subject not found in the given company.'));
+                throw new \InvalidArgumentException(
+                    __('Parent subject not found in the given company.')
+                );
             }
         }
 
         if (isset($data['code']) && $data['code'] !== '') {
-            $code = $this->buildCodeWithParent($data['code'], $parentId, (int) $companyId);
-            $this->validateCodeUniqueness($code, (int) $companyId);
+            $code = $this->buildCodeWithParent(
+                $data['code'],
+                $parentId,
+                (int) $companyId
+            );
+
+            $this->validateCodeUniqueness(
+                $code,
+                (int) $companyId
+            );
         } else {
-            $code = $this->generateCode($parentId, (int) $companyId);
+            $code = $this->generateCode(
+                $parentId,
+                (int) $companyId
+            );
         }
 
-        if (isset($data['type'], $data['is_permanent'])) {
-            $resolvedType = $parentSubject ? $this->resolveTypeForParent($parentSubject, $data['type']) : SubjectType::fromName($data['type'] ?? 'both');
-            $is_permanent = $parentSubject ? $parentSubject->is_permanent : ($data['is_permanent']);
+        if (
+            isset($data['type'], $data['is_permanent'])
+        ) {
+            $resolvedType = $parentSubject
+                ? $this->resolveTypeForParent(
+                    $parentSubject,
+                    $data['type']
+                )
+                : SubjectType::fromName(
+                    $data['type'] ?? 'both'
+                );
+
+            $is_permanent = $parentSubject
+                ? $parentSubject->is_permanent
+                : $data['is_permanent'];
         } else {
-            $resolvedType = $parentSubject ? $this->resolveTypeForParent($parentSubject, null) : SubjectType::BOTH;
-            $is_permanent = $parentSubject ? $parentSubject->is_permanent : false;
+            $resolvedType = $parentSubject
+                ? $this->resolveTypeForParent(
+                    $parentSubject,
+                    null
+                )
+                : SubjectType::BOTH;
+
+            $is_permanent = $parentSubject
+                ? $parentSubject->is_permanent
+                : false;
         }
 
         $attributes = [
@@ -248,81 +398,181 @@ class SubjectService
 
     /**
      * Edit an existing Subject.
-     *
-     * Accepted keys in $data:
-     * - name (string, optional)
-     * - parent_id (int|null, optional) - will trigger code regeneration if changed
-     * - type (string, optional) - 'debtor', 'creditor', or 'both'
      */
-    public function editSubject(Subject $subject, array $data): Subject
-    {
+    public function editSubject(
+        Subject $subject,
+        array $data
+    ): Subject {
         if (! $subject->exists) {
-            throw new \InvalidArgumentException(__('Subject does not exist.'));
+            throw new \InvalidArgumentException(
+                __('Subject does not exist.')
+            );
         }
 
         $companyId = $subject->company_id;
 
-        $parentIdChanged = array_key_exists('parent_id', $data) && $data['parent_id'] !== $subject->parent_id;
+        $parentIdChanged =
+            array_key_exists('parent_id', $data)
+            && $data['parent_id'] !== $subject->parent_id;
 
         if ($parentIdChanged) {
             $newParentId = $data['parent_id'];
+
             if ($newParentId === '' || $newParentId === 0) {
                 $newParentId = null;
             }
 
             if ($newParentId !== null) {
-                $descendantIds = $subject->getAllDescendantIds();
-                if (in_array($newParentId, $descendantIds)) {
-                    throw new \InvalidArgumentException(__('Cannot move a subject to one of its descendants.'));
+                $descendantIds =
+                    $subject->getAllDescendantIds();
+
+                if (
+                    in_array(
+                        $newParentId,
+                        $descendantIds
+                    )
+                ) {
+                    throw new \InvalidArgumentException(
+                        __('Cannot move a subject to one of its descendants.')
+                    );
                 }
 
                 $newParent = Subject::withoutGlobalScopes()
-                    ->where('company_id', $companyId)
+                    ->where(
+                        'company_id',
+                        $companyId
+                    )
                     ->find($newParentId);
+
                 if (! $newParent) {
-                    throw new \InvalidArgumentException(__('New parent subject not found in the given company.'));
+                    throw new \InvalidArgumentException(
+                        __('New parent subject not found in the given company.')
+                    );
                 }
 
-                $data['is_permanent'] = $newParent->is_permanent;
-                $data['type'] = $this->resolveTypeForParent($newParent, $data['type'] ?? null);
+                $data['is_permanent'] =
+                    $newParent->is_permanent;
+
+                $data['type'] =
+                    $this->resolveTypeForParent(
+                        $newParent,
+                        $data['type'] ?? null
+                    );
             }
 
-            if (isset($data['code']) && ! empty($data['code'])) {
-                $newCode = $this->buildCodeWithParent($data['code'], $newParentId, $companyId);
-                $this->validateCodeUniqueness($newCode, $companyId, $subject->id);
+            if (
+                isset($data['code'])
+                && ! empty($data['code'])
+            ) {
+                $newCode =
+                    $this->buildCodeWithParent(
+                        $data['code'],
+                        $newParentId,
+                        $companyId
+                    );
+
+                $this->validateCodeUniqueness(
+                    $newCode,
+                    $companyId,
+                    $subject->id
+                );
             } else {
-                $newCode = $this->generateCode($newParentId, $companyId);
+                $newCode =
+                    $this->generateCode(
+                        $newParentId,
+                        $companyId
+                    );
             }
+
             $data['code'] = $newCode;
+
             if (isset($data['type'])) {
-                $data['type'] = SubjectType::fromName($data['type']);
+                $data['type'] =
+                    SubjectType::fromName(
+                        $data['type']
+                    );
             }
 
-            $subject->update(array_intersect_key($data, array_flip(['name', 'parent_id', 'code', 'type', 'is_permanent'])));
+            $subject->update(
+                array_intersect_key(
+                    $data,
+                    array_flip([
+                        'name',
+                        'parent_id',
+                        'code',
+                        'type',
+                        'is_permanent',
+                    ])
+                )
+            );
 
-            $this->updateDescendantCodesTypesIsPermanents($subject);
+            $this->updateDescendantCodesTypesIsPermanents(
+                $subject
+            );
         } else {
-            $allowedFields = array_intersect_key($data, array_flip(['name', 'code', 'type', 'is_permanent']));
+            $allowedFields = array_intersect_key(
+                $data,
+                array_flip([
+                    'name',
+                    'code',
+                    'type',
+                    'is_permanent',
+                ])
+            );
+
             if (! empty($allowedFields)) {
                 $oldCode = $subject->code;
                 $oldType = $subject->type;
-                $oldIsPermanent = $subject->is_permanent;
+                $oldIsPermanent =
+                    $subject->is_permanent;
 
-                if (isset($allowedFields['code']) && ! empty($allowedFields['code'])) {
-                    $newCode = $this->buildCodeWithParent($allowedFields['code'], $subject->parent_id, $companyId);
-                    $this->validateCodeUniqueness($newCode, $companyId, $subject->id);
+                if (
+                    isset($allowedFields['code'])
+                    && ! empty($allowedFields['code'])
+                ) {
+                    $newCode =
+                        $this->buildCodeWithParent(
+                            $allowedFields['code'],
+                            $subject->parent_id,
+                            $companyId
+                        );
+
+                    $this->validateCodeUniqueness(
+                        $newCode,
+                        $companyId,
+                        $subject->id
+                    );
                 } else {
-                    $newCode = $subject->code; // If code is not being changed, keep the old code to avoid unnecessary updates and descendant code regenerations
+                    $newCode = $subject->code;
                 }
 
                 $allowedFields['code'] = $newCode;
+
                 if (isset($allowedFields['type'])) {
-                    $allowedFields['type'] = SubjectType::fromName($allowedFields['type']);
+                    $allowedFields['type'] =
+                        SubjectType::fromName(
+                            $allowedFields['type']
+                        );
                 }
 
-                $subject->update($allowedFields);
-                if ($allowedFields['code'] !== $oldCode || (isset($allowedFields['type']) && $allowedFields['type'] !== $oldType) || (isset($allowedFields['is_permanent']) && $allowedFields['is_permanent'] !== $oldIsPermanent)) {
-                    $this->updateDescendantCodesTypesIsPermanents($subject);
+                $subject->update(
+                    $allowedFields
+                );
+
+                if (
+                    $allowedFields['code'] !== $oldCode
+                    || (
+                        isset($allowedFields['type'])
+                        && $allowedFields['type'] !== $oldType
+                    )
+                    || (
+                        isset($allowedFields['is_permanent'])
+                        && $allowedFields['is_permanent'] !== $oldIsPermanent
+                    )
+                ) {
+                    $this->updateDescendantCodesTypesIsPermanents(
+                        $subject
+                    );
                 }
             }
         }
@@ -330,285 +580,627 @@ class SubjectService
         return $subject->fresh();
     }
 
-    private function resolveTypeForParent(Subject $parent, SubjectType|string|null $requestedType): SubjectType
-    {
+    private function resolveTypeForParent(
+        Subject $parent,
+        SubjectType|string|null $requestedType
+    ): SubjectType {
         if (! $parent->type->isBoth()) {
             return $parent->type;
         }
 
-        return $requestedType ? SubjectType::fromName($requestedType) : SubjectType::BOTH;
+        return $requestedType
+            ? SubjectType::fromName($requestedType)
+            : SubjectType::BOTH;
     }
 
     /**
-     * Recursively update codes, types and is_permanent for all descendants of a subject.
+     * Recursively update codes, types and is_permanent
+     * for all descendants of a subject.
      */
-    private function updateDescendantCodesTypesIsPermanents(Subject $subject): void
-    {
+    private function updateDescendantCodesTypesIsPermanents(
+        Subject $subject
+    ): void {
         $children = $subject->children()->get();
 
         foreach ($children as $child) {
-            $childOwnPortion = substr($child->code, -3);
-            $newCode = $subject->code.$childOwnPortion;
-            $newType = $this->resolveTypeForParent($subject, $child->type);
-            $newIsPermanent = $subject->is_permanent;
+            $childOwnPortion =
+                substr($child->code, -3);
 
-            $child->update(['code' => $newCode, 'type' => $newType, 'is_permanent' => $newIsPermanent]);
+            $newCode =
+                $subject->code . $childOwnPortion;
+
+            $newType =
+                $this->resolveTypeForParent(
+                    $subject,
+                    $child->type
+                );
+
+            $newIsPermanent =
+                $subject->is_permanent;
+
+            $child->update([
+                'code' => $newCode,
+                'type' => $newType,
+                'is_permanent' => $newIsPermanent,
+            ]);
 
             if ($child->hasChildren()) {
-                $this->updateDescendantCodesTypesIsPermanents($child);
+                $this->updateDescendantCodesTypesIsPermanents(
+                    $child
+                );
             }
         }
     }
 
-    public function getAllowedTypesForSubject(?Subject $parentSubject): array
-    {
-        if (is_null($parentSubject) || $parentSubject->type->isBoth()) {
+    public function getAllowedTypesForSubject(
+        ?Subject $parentSubject
+    ): array {
+        if (
+            is_null($parentSubject)
+            || $parentSubject->type->isBoth()
+        ) {
             return SubjectType::valueNames();
         }
 
-        return [$parentSubject->type->valueName()];
+        return [
+            $parentSubject->type->valueName(),
+        ];
     }
 
     /**
-     * Build a complete code by combining parent code with provided code portion.
+     * Build a complete code by combining
+     * parent code with provided code portion.
      */
-    private function buildCodeWithParent(string $codePortion, ?int $parentId, int $companyId): string
-    {
-        // Sanitize the code portion (remove any non-numeric characters)
-        $codePortion = preg_replace('/[^0-9]/', '', $codePortion);
+    private function buildCodeWithParent(
+        string $codePortion,
+        ?int $parentId,
+        int $companyId
+    ): string {
+        $codePortion = preg_replace(
+            '/[^0-9]/',
+            '',
+            $codePortion
+        );
 
         if ($parentId) {
-            $parent = Subject::withoutGlobalScopes()->where('company_id', $companyId)->find($parentId);
+            $parent = Subject::withoutGlobalScopes()
+                ->where(
+                    'company_id',
+                    $companyId
+                )
+                ->find($parentId);
+
             if (! $parent) {
-                throw new \InvalidArgumentException(__('Parent subject not found in the given company.'));
+                throw new \InvalidArgumentException(
+                    'Parent subject not found in the given company.'
+                );
             }
 
-            // Ensure the code portion is 3 digits
             if (strlen($codePortion) > 3) {
-                throw new \InvalidArgumentException(__('Code portion cannot exceed 3 digits.'));
+                throw new \InvalidArgumentException(
+                    __('Code portion cannot exceed 3 digits.')
+                );
             }
-            $codePortion = str_pad($codePortion, 3, '0', STR_PAD_LEFT);
 
-            return $parent->code.$codePortion;
+            $codePortion = str_pad(
+                $codePortion,
+                3,
+                '0',
+                STR_PAD_LEFT
+            );
+
+            return $parent->code . $codePortion;
         }
 
-        // Root subject - ensure it's 3 digits
         if (strlen($codePortion) > 3) {
-            throw new \InvalidArgumentException('Root subject code cannot exceed 3 digits.');
+            throw new \InvalidArgumentException(
+                'Root subject code cannot exceed 3 digits.'
+            );
         }
 
-        return str_pad($codePortion, 3, '0', STR_PAD_LEFT);
+        return str_pad(
+            $codePortion,
+            3,
+            '0',
+            STR_PAD_LEFT
+        );
     }
 
     /**
      * Validate that the code is unique within the company.
      */
-    private function validateCodeUniqueness(string $code, int $companyId, ?int $excludeId = null): void
-    {
+    private function validateCodeUniqueness(
+        string $code,
+        int $companyId,
+        ?int $excludeId = null
+    ): void {
         $query = Subject::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->where('code', $code);
+            ->where(
+                'company_id',
+                $companyId
+            )
+            ->where(
+                'code',
+                $code
+            );
 
         if ($excludeId !== null) {
-            $query->where('id', '!=', $excludeId);
+            $query->where(
+                'id',
+                '!=',
+                $excludeId
+            );
         }
 
         if ($query->exists()) {
-            throw new \InvalidArgumentException(__('The code :code already exists in this company.', ['code' => $code]));
+            throw new \InvalidArgumentException(
+                __(
+                    'The code :code already exists in this company.',
+                    [
+                        'code' => $code,
+                    ]
+                )
+            );
         }
     }
 
     /**
-     * Generate hierarchical subject code for the given company and parent.
+     * Generate hierarchical subject code
+     * for the given company and parent.
      */
-    private function generateCode(?int $parentId, int $companyId): string
-    {
+    private function generateCode(
+        ?int $parentId,
+        int $companyId
+    ): string {
         if ($parentId) {
-            $parent = Subject::withoutGlobalScopes()->where('company_id', $companyId)->find($parentId);
+            $parent = Subject::withoutGlobalScopes()
+                ->where(
+                    'company_id',
+                    $companyId
+                )
+                ->find($parentId);
+
             if (! $parent) {
-                throw new \InvalidArgumentException('Parent subject not found in the given company.');
+                throw new \InvalidArgumentException(
+                    'Parent subject not found in the given company.'
+                );
             }
 
             $parentCode = $parent->code;
+
             $lastChild = Subject::withoutGlobalScopes()
-                ->where('company_id', $companyId)
-                ->where('parent_id', $parentId)
-                ->orderBy('code', 'desc')
+                ->where(
+                    'company_id',
+                    $companyId
+                )
+                ->where(
+                    'parent_id',
+                    $parentId
+                )
+                ->orderBy(
+                    'code',
+                    'desc'
+                )
                 ->first();
 
             if ($lastChild) {
-                $childPart = substr($lastChild->code, -3);
-                $next = (int) $childPart + 1;
+                $childPart =
+                    substr($lastChild->code, -3);
+
+                $next =
+                    (int) $childPart + 1;
+
                 if ($next > 999) {
-                    throw new \Exception("Maximum of 999 children reached for parent {$parentCode}");
+                    throw new \Exception(
+                        "Maximum of 999 children reached for parent {$parentCode}"
+                    );
                 }
 
-                $code = $parentCode.str_pad($next, 3, '0', STR_PAD_LEFT);
+                $code =
+                    $parentCode
+                    . str_pad(
+                        $next,
+                        3,
+                        '0',
+                        STR_PAD_LEFT
+                    );
 
                 try {
-                    $this->validateCodeUniqueness($code, $companyId);
+                    $this->validateCodeUniqueness(
+                        $code,
+                        $companyId
+                    );
                 } catch (\Exception $e) {
-                    while (Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('code', $code)->exists()) {
+                    while (
+                        Subject::withoutGlobalScopes()
+                        ->where(
+                            'company_id',
+                            $companyId
+                        )
+                        ->where(
+                            'code',
+                            $code
+                        )
+                        ->exists()
+                    ) {
                         $next++;
+
                         if ($next > 999) {
-                            throw new \Exception("Maximum of 999 children reached for parent {$parentCode}");
+                            throw new \Exception(
+                                "Maximum of 999 children reached for parent {$parentCode}"
+                            );
                         }
-                        $code = $parentCode.str_pad($next, 3, '0', STR_PAD_LEFT);
+
+                        $code =
+                            $parentCode
+                            . str_pad(
+                                $next,
+                                3,
+                                '0',
+                                STR_PAD_LEFT
+                            );
                     }
                 }
 
                 return $code;
             }
 
-            return $parentCode.'001';
+            return $parentCode . '001';
         }
 
-        // Root subject generation
         $lastRoot = Subject::withoutGlobalScopes()
-            ->where('company_id', $companyId)
+            ->where(
+                'company_id',
+                $companyId
+            )
             ->whereNull('parent_id')
-            ->orderBy('code', 'desc')
+            ->orderBy(
+                'code',
+                'desc'
+            )
             ->first();
 
         $next = 1;
+
         if ($lastRoot) {
-            $next = (int) $lastRoot->code + 1;
+            $next =
+                (int) $lastRoot->code + 1;
+
             if ($next > 999) {
-                throw new \Exception('Maximum of 999 root subjects reached');
+                throw new \Exception(
+                    'Maximum of 999 root subjects reached'
+                );
             }
         }
 
-        return str_pad($next, 3, '0', STR_PAD_LEFT);
+        return str_pad(
+            $next,
+            3,
+            '0',
+            STR_PAD_LEFT
+        );
     }
 
-    private function syncSubjectableSubjectId(Subject $subject): void
-    {
-        if (is_null($subject->subjectable_type) || is_null($subject->subjectable_id)) {
+    private function syncSubjectableSubjectId(
+        Subject $subject
+    ): void {
+        if (
+            is_null($subject->subjectable_type)
+            || is_null($subject->subjectable_id)
+        ) {
             return;
         }
 
         $subjectable = $subject->subjectable;
-        if ($subjectable && in_array(get_class($subjectable), [Customer::class, CustomerGroup::class, BankAccount::class])) {
-            $subjectable->subject_id = $subject->id;
+
+        if (
+            $subjectable
+            && in_array(
+                get_class($subjectable),
+                [
+                    Customer::class,
+                    CustomerGroup::class,
+                    BankAccount::class,
+                ]
+            )
+        ) {
+            $subjectable->subject_id =
+                $subject->id;
+
             $subjectable->save();
         }
     }
 
-    public function transferSubject(Subject $source, Subject $destination, bool $transferSubjectable = false, bool $removeSource = false): array
-    {
+    public function transferSubject(
+        Subject $source,
+        Subject $destination,
+        bool $transferSubjectable = false,
+        bool $removeSource = false
+    ): array {
         if ($source->id === $destination->id) {
-            throw new \InvalidArgumentException(__('Source and destination subjects must be different.'));
+            throw new \InvalidArgumentException(
+                __('Source and destination subjects must be different.')
+            );
         }
 
-        if (in_array($destination->id, $source->getAllDescendantIds())) {
-            throw new \InvalidArgumentException(__('Cannot transfer to a descendant of the source subject.'));
+        if (
+            in_array(
+                $destination->id,
+                $source->getAllDescendantIds()
+            )
+        ) {
+            throw new \InvalidArgumentException(
+                __('Cannot transfer to a descendant of the source subject.')
+            );
         }
 
-        $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
-        $startDate = jalali_to_gregorian($year, 1, 1, '-');
-        $endDate = now()->format('Y-m-d');
+        $year = (int) (
+            config('active-company-fiscal-year')
+            ?? toEnglish(jdate('Y'))
+        );
 
-        $result = DB::transaction(function () use ($source, $destination, $startDate, $endDate, $transferSubjectable) {
-            if ($transferSubjectable && ! is_null($source->subjectable_type) && ! is_null($source->subjectable_id)) {
-                $destination->subjectable_type = $source->subjectable_type;
-                $destination->subjectable_id = $source->subjectable_id;
-                $destination->save();
+        $startDate =
+            jalali_to_gregorian(
+                $year,
+                1,
+                1,
+                '-'
+            );
 
-                $this->syncSubjectableSubjectId($destination);
+        $endDate =
+            now()->format('Y-m-d');
 
-                $source->subjectable_type = null;
-                $source->subjectable_id = null;
-                $source->save();
+        $result = DB::transaction(
+            function () use (
+                $source,
+                $destination,
+                $startDate,
+                $endDate,
+                $transferSubjectable
+            ) {
+                if (
+                    $transferSubjectable
+                    && ! is_null(
+                        $source->subjectable_type
+                    )
+                    && ! is_null(
+                        $source->subjectable_id
+                    )
+                ) {
+                    $destination->subjectable_type =
+                        $source->subjectable_type;
+
+                    $destination->subjectable_id =
+                        $source->subjectable_id;
+
+                    $destination->save();
+
+                    $this->syncSubjectableSubjectId(
+                        $destination
+                    );
+
+                    $source->subjectable_type = null;
+                    $source->subjectable_id = null;
+
+                    $source->save();
+                }
+
+                $query = Transaction::where(
+                    'subject_id',
+                    $source->id
+                )->whereHas(
+                    'document',
+                    function ($q) use (
+                        $startDate,
+                        $endDate
+                    ) {
+                        $q->whereBetween(
+                            'date',
+                            [
+                                $startDate,
+                                $endDate,
+                            ]
+                        );
+                    }
+                );
+
+                $sum =
+                    (clone $query)->sum('value');
+
+                $count =
+                    $query->count();
+
+                $query->update([
+                    'subject_id' =>
+                    $destination->id,
+                ]);
+
+                return [
+                    'count' => $count,
+                    'sum' => $sum,
+                    'source' => $source,
+                    'destination' => $destination,
+                ];
             }
+        );
 
-            $query = Transaction::where('subject_id', $source->id)->whereHas('document', function ($q) use ($startDate, $endDate) {
-                $q->whereBetween('date', [$startDate, $endDate]);
-            });
-
-            $sum = (clone $query)->sum('value');
-            $count = $query->count();
-
-            $query->update(['subject_id' => $destination->id]);
-
-            return [
-                'count' => $count,
-                'sum' => $sum,
-                'source' => $source,
-                'destination' => $destination,
-            ];
-        });
-
-        if ($removeSource && $source->exists) {
+        if (
+            $removeSource
+            && $source->exists
+        ) {
             try {
-                $source->fresh()->delete();
-                $result['source_removed'] = true;
+                $source
+                    ->fresh()
+                    ->delete();
+
+                $result['source_removed'] =
+                    true;
             } catch (\Exception) {
-                $result['source_removed'] = false;
+                $result['source_removed'] =
+                    false;
             }
         }
 
         return $result;
     }
 
-    public function transferSubjectToNewUnderParent(Subject $source, Subject $parentDestination, bool $transferSubjectable = false, bool $removeSource = false): array
-    {
-        if ($source->id === $parentDestination->id) {
-            throw new \InvalidArgumentException(__('Source and parent destination subjects must be different.'));
+    public function transferSubjectToNewUnderParent(
+        Subject $source,
+        Subject $parentDestination,
+        bool $transferSubjectable = false,
+        bool $removeSource = false
+    ): array {
+        if (
+            $source->id ===
+            $parentDestination->id
+        ) {
+            throw new \InvalidArgumentException(
+                __('Source and parent destination subjects must be different.')
+            );
         }
 
-        $descendantIds = $source->getAllDescendantIds();
-        if (in_array($parentDestination->id, $descendantIds)) {
-            throw new \InvalidArgumentException(__('Cannot transfer to a descendant of the source subject.'));
+        $descendantIds =
+            $source->getAllDescendantIds();
+
+        if (
+            in_array(
+                $parentDestination->id,
+                $descendantIds
+            )
+        ) {
+            throw new \InvalidArgumentException(
+                __('Cannot transfer to a descendant of the source subject.')
+            );
         }
 
-        $result = DB::transaction(function () use ($source, $parentDestination, $transferSubjectable) {
-            $newSubject = Subject::create([
-                'name' => $source->name,
-                'code' => $this->generateCode($parentDestination->id, $source->company_id),
-                'parent_id' => $parentDestination->id,
-                'company_id' => $source->company_id,
-                'type' => $this->resolveTypeForParent($parentDestination, $source->type),
-                'is_permanent' => $parentDestination->is_permanent,
-            ]);
+        $result = DB::transaction(
+            function () use (
+                $source,
+                $parentDestination,
+                $transferSubjectable
+            ) {
+                $newSubject = Subject::create([
+                    'name' =>
+                    $source->name,
 
-            if ($transferSubjectable && ! is_null($source->subjectable_type) && ! is_null($source->subjectable_id)) {
-                $newSubject->subjectable_type = $source->subjectable_type;
-                $newSubject->subjectable_id = $source->subjectable_id;
-                $newSubject->save();
+                    'code' =>
+                    $this->generateCode(
+                        $parentDestination->id,
+                        $source->company_id
+                    ),
 
-                $this->syncSubjectableSubjectId($newSubject);
+                    'parent_id' =>
+                    $parentDestination->id,
 
-                $source->subjectable_type = null;
-                $source->subjectable_id = null;
-                $source->save();
+                    'company_id' =>
+                    $source->company_id,
+
+                    'type' =>
+                    $this->resolveTypeForParent(
+                        $parentDestination,
+                        $source->type
+                    ),
+
+                    'is_permanent' =>
+                    $parentDestination->is_permanent,
+                ]);
+
+                if (
+                    $transferSubjectable
+                    && ! is_null(
+                        $source->subjectable_type
+                    )
+                    && ! is_null(
+                        $source->subjectable_id
+                    )
+                ) {
+                    $newSubject->subjectable_type =
+                        $source->subjectable_type;
+
+                    $newSubject->subjectable_id =
+                        $source->subjectable_id;
+
+                    $newSubject->save();
+
+                    $this->syncSubjectableSubjectId(
+                        $newSubject
+                    );
+
+                    $source->subjectable_type = null;
+                    $source->subjectable_id = null;
+
+                    $source->save();
+                }
+
+                $year = (int) (
+                    config('active-company-fiscal-year')
+                    ?? toEnglish(jdate('Y'))
+                );
+
+                $startDate =
+                    jalali_to_gregorian(
+                        $year,
+                        1,
+                        1,
+                        '-'
+                    );
+
+                $endDate =
+                    now()->format('Y-m-d');
+
+                $query = Transaction::where(
+                    'subject_id',
+                    $source->id
+                )->whereHas(
+                    'document',
+                    function ($q) use (
+                        $startDate,
+                        $endDate
+                    ) {
+                        $q->whereBetween(
+                            'date',
+                            [
+                                $startDate,
+                                $endDate,
+                            ]
+                        );
+                    }
+                );
+
+                $sum =
+                    (clone $query)->sum('value');
+
+                $count =
+                    $query->count();
+
+                $query->update([
+                    'subject_id' =>
+                    $newSubject->id,
+                ]);
+
+                return [
+                    'count' => $count,
+                    'sum' => $sum,
+                    'source' => $source,
+                    'destination' => $newSubject,
+                ];
             }
+        );
 
-            $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
-            $startDate = jalali_to_gregorian($year, 1, 1, '-');
-            $endDate = now()->format('Y-m-d');
-
-            $query = Transaction::where('subject_id', $source->id)->whereHas('document', function ($q) use ($startDate, $endDate) {
-                $q->whereBetween('date', [$startDate, $endDate]);
-            });
-
-            $sum = (clone $query)->sum('value');
-            $count = $query->count();
-            $query->update(['subject_id' => $newSubject->id]);
-
-            return [
-                'count' => $count,
-                'sum' => $sum,
-                'source' => $source,
-                'destination' => $newSubject,
-            ];
-        });
-
-        if ($removeSource && $source->exists) {
+        if (
+            $removeSource
+            && $source->exists
+        ) {
             try {
-                $source->fresh()->delete();
-                $result['source_removed'] = true;
+                $source
+                    ->fresh()
+                    ->delete();
+
+                $result['source_removed'] =
+                    true;
             } catch (\Exception) {
-                $result['source_removed'] = false;
+                $result['source_removed'] =
+                    false;
             }
         }
 

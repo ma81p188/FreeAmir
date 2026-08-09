@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('org_charts', function (Blueprint $table) {
             $table->increments('id');
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('company_id')->constrained()->noActionOnDelete();
             $table->string('title', 200);
             $table->unsignedInteger('parent_id')->nullable()->comment('NULL = root node');
             $table->text('description')->nullable();
@@ -21,7 +21,7 @@ return new class extends Migration
 
             $table->foreign('parent_id')
                 ->references('id')->on('org_charts')
-                ->nullOnDelete();
+                ->noActionOnDelete();
         });
     }
 

@@ -147,9 +147,9 @@ Schema::create('documents', function (Blueprint $table) {
     $table->string('title')->nullable();
     $table->date('date')->nullable();
     $table->date('approved_at')->nullable();
-    $table->foreignId('creator_id')->nullable()->constrained('users')->nullOnDelete();
-    $table->foreignId('approver_id')->nullable()->constrained('users')->nullOnDelete();
-    $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
+    $table->foreignId('creator_id')->nullable()->constrained('users')->noActionOnDelete();
+    $table->foreignId('approver_id')->nullable()->constrained('users')->noActionOnDelete();
+    $table->foreignId('company_id')->nullable()->constrained()->noActionOnDelete();
     $table->timestamps();
 });
 ```

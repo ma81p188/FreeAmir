@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('invoices', function (Blueprint $table) {
             $table->unsignedBigInteger('returned_invoice_id')->nullable();
-            $table->foreign('returned_invoice_id')->references('id')->on('invoices')->onDelete('set null');
+            $table->foreign('returned_invoice_id')->references('id')->on('invoices')->noActionOnDelete();
         });
     }
 

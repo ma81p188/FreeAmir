@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('monthly_attendances', function (Blueprint $table) {
             $table->increments('id');
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('company_id')->constrained()->noActionOnDelete();
             $table->unsignedInteger('employee_id');
             $table->smallInteger('year')->unsigned();
             $table->tinyInteger('month')->unsigned()->comment('1-12');
@@ -31,12 +31,12 @@ return new class extends Migration
             $table->index(['year', 'month'], 'idx_ma_year_month');
             $table->foreign('employee_id')
                 ->references('id')->on('employees')
-                ->cascadeOnDelete();
+                ->noActionOnDelete();
         });
 
         Schema::create('attendance_logs', function (Blueprint $table) {
             $table->increments('id');
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('company_id')->constrained()->noActionOnDelete();
             $table->unsignedInteger('employee_id');
             $table->unsignedInteger('monthly_attendance_id')->nullable()->comment('NULL = هنوز محاسبه نشده');
             $table->date('log_date');
@@ -57,10 +57,10 @@ return new class extends Migration
             $table->index('log_date', 'idx_logs_date');
             $table->foreign('employee_id')
                 ->references('id')->on('employees')
-                ->cascadeOnDelete();
+                ->noActionOnDelete();
             $table->foreign('monthly_attendance_id')
                 ->references('id')->on('monthly_attendances')
-                ->nullOnDelete();
+                ->noActionOnDelete();
         });
     }
 

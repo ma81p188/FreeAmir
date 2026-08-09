@@ -33,7 +33,7 @@ class CreateTransactions2Table extends Migration
             $table->boolean('activated');
             $table->timestamps();
 
-            $table->foreign('customer_id')->references('Id')->on('customers')->onDelete('set null');
+            $table->foreign('customer_id')->references('Id')->on('customers')->noActionOnDelete();
         });
     }
 

@@ -7,7 +7,7 @@
                 <x-show-message-bags />
 
                 <p class="text-sm text-gray-500">
-                    {{ __('Upload a CSV file with one customer per line. Required columns: name, group_name. If a group with the same name exists it is reused, otherwise it is created. Leave subject_code empty to auto-assign one.') }}
+                    {{ __('Upload a CSV file with one customer per line. Required columns: name (or C_Name). Optional columns: code (or C_Code), group_name. If group_name is empty, customers are added to the default group. If a group with the same name exists it is reused, otherwise it is created.') }}
                 </p>
 
                 <div class="mt-3">

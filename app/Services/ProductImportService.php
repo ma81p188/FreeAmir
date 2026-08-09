@@ -159,7 +159,7 @@ class ProductImportService
                     'name' => $name,
                     'group' => $group->id,
                     'company_id' => $companyId,
-                    'oversell' => $this->normalizeBool($row['oversell'] ?? null),
+                    'oversell' => $this->normalizeBool($row['oversell'] ?? 0),
                 ];
 
                 foreach (self::PLAIN_FIELDS as $field) {

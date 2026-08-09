@@ -20,10 +20,10 @@ class CreateProductGroupsTable extends Migration
             $table->unsignedBigInteger('sellId')->nullable();
             $table->unsignedBigInteger('subject_id')->nullable();
 
-            $table->foreign('buyId')->references('id')->on('subjects')->onDelete('set null');
-            $table->foreign('sellId')->references('id')->on('subjects')->onDelete('set null');
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete()->after('name');
-            $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null');
+            $table->foreign('buyId')->references('id')->on('subjects')->noActionOnDelete();
+            $table->foreign('sellId')->references('id')->on('subjects')->noActionOnDelete();
+            $table->foreignId('company_id')->constrained()->noActionOnDelete()->after('name');
+            $table->foreign('subject_id')->references('id')->on('subjects')->noActionOnDelete();
 
             $table->decimal('vat')->nullable();
 

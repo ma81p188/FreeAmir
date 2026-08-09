@@ -22,8 +22,8 @@ return new class extends Migration
         }
 
         Schema::table('products', function (Blueprint $table) {
-            $table->foreignId('sales_returns_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
-            $table->foreignId('income_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
+            $table->foreignId('sales_returns_subject_id')->nullable()->constrained('subjects')->noActionOnDelete();
+            $table->foreignId('income_subject_id')->nullable()->constrained('subjects')->noActionOnDelete();
         });
     }
 

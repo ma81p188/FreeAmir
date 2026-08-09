@@ -27,11 +27,11 @@ class CreatePaymentsTable extends Migration
             $table->string('track_code')->nullable();
             $table->unsignedBigInteger('invoice_id')->nullable();
             $table->text('payer_name')->nullable();
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('company_id')->constrained()->noActionOnDelete();
             $table->timestamps();
 
-            $table->foreign('payer_id')->references('id')->on('customers')->onDelete('set null');
-            $table->foreign('invoice_id')->references('id')->on('invoices')->onDelete('set null');
+            $table->foreign('payer_id')->references('id')->on('customers')->noActionOnDelete();
+            $table->foreign('invoice_id')->references('id')->on('invoices')->noActionOnDelete();
         });
     }
 

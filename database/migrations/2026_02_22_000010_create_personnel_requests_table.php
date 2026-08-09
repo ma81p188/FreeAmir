@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('personnel_requests', function (Blueprint $table) {
             $table->increments('id');
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('company_id')->constrained()->noActionOnDelete();
             $table->unsignedInteger('employee_id');
 
             $table->enum('request_type', [
@@ -44,11 +44,11 @@ return new class extends Migration
 
             $table->foreign('approved_by')
                 ->references('id')->on('users')
-                ->nullOnDelete();
+                ->noActionOnDelete();
 
             $table->foreign('payroll_id')
                 ->references('id')->on('payrolls')
-                ->nullOnDelete();
+                ->noActionOnDelete();
         });
     }
 

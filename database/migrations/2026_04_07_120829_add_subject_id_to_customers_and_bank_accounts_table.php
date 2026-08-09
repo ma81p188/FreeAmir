@@ -9,11 +9,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('customers', function (Blueprint $table) {
-            $table->foreignId('subject_id')->nullable()->constrained('subjects')->nullOnDelete();
+            $table->foreignId('subject_id')->nullable()->constrained('subjects')->noActionOnDelete();
         });
 
         Schema::table('bank_accounts', function (Blueprint $table) {
-            $table->foreignId('subject_id')->nullable()->constrained('subjects')->nullOnDelete();
+            $table->foreignId('subject_id')->nullable()->constrained('subjects')->noActionOnDelete();
         });
     }
 

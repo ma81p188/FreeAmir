@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('payrolls', function (Blueprint $table) {
             $table->increments('id');
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('company_id')->constrained()->noActionOnDelete();
             $table->unsignedInteger('employee_id');
             $table->unsignedInteger('decree_id')->nullable();
             $table->smallInteger('year')->unsigned();
@@ -37,7 +37,7 @@ return new class extends Migration
 
             $table->foreign('decree_id')
                 ->references('id')->on('salary_decrees')
-                ->nullOnDelete();
+                ->noActionOnDelete();
         });
 
         Schema::create('payroll_items', function (Blueprint $table) {
@@ -52,7 +52,7 @@ return new class extends Migration
 
             $table->foreign('payroll_id')
                 ->references('id')->on('payrolls')
-                ->cascadeOnDelete();
+                ->noActionOnDelete();
 
             $table->foreign('element_id')
                 ->references('id')->on('payroll_elements');

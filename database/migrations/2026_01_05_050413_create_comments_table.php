@@ -16,9 +16,9 @@ return new class extends Migration
             $table->unsignedBigInteger('customer_id')->nullable();
             $table->unsignedBigInteger('user_id')->nullable();
             $table->text('content');
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
-            $table->foreign('customer_id')->references('id')->on('customers')->onDelete('set null');
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
+            $table->foreignId('company_id')->constrained()->noActionOnDelete();
+            $table->foreign('customer_id')->references('id')->on('customers')->noActionOnDelete();
+            $table->foreign('user_id')->references('id')->on('users')->noActionOnDelete();
             $table->decimal('rating', 3, 2)->default(0);
             $table->timestamps();
         });

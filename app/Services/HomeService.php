@@ -354,9 +354,9 @@ class HomeService
         $dailyTransactions = (clone $transactionQuery)
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
             ->whereBetween('documents.date', [$startDate, $endDate])
-            ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
-            ->groupBy('date')
-            ->orderBy('date')
+            ->selectRaw('CAST(documents.date AS date) as date, SUM(transactions.value) as total')
+            ->groupByRaw('CAST(documents.date AS date)')
+            ->orderByRaw('CAST(documents.date AS date)')
             ->pluck('total', 'date')
             ->map(fn ($v) => (int) $v);
 

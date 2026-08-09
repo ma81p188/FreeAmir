@@ -30,7 +30,7 @@ class CustomerController extends Controller
                 Transaction::query()
                     ->selectRaw('COALESCE(SUM(value), 0)')
                     ->whereColumn('transactions.subject_id', 'customers.subject_id'),
-                'balance'
+                'computed_balance'
             )
             ->orderBy('id', 'desc');
 
@@ -69,7 +69,7 @@ class CustomerController extends Controller
         }
         if ($balanceFilter !== 'all') {
             $query->whereIn('subject_id', $this->balanceSubjectIds($balanceFilter));
-            $query->reorder('balance', $balanceFilter === 'debt' ? 'asc' : 'desc');
+            $query->reorder('computed_balance', $balanceFilter === 'debt' ? 'asc' : 'desc');
         }
 
         $balanceSum = (float) Transaction::query()
@@ -170,6 +170,7 @@ class CustomerController extends Controller
                 ->chunk(200, function ($customers) use ($file) {
                     foreach ($customers as $customer) {
                         fputcsv($file, [
+                            $customer->code,
                             $customer->name,
                             $customer->group?->name,
                             $customer->subject?->code,

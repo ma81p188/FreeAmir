@@ -29,9 +29,9 @@ class CreateProductsTable extends Migration
             $table->decimal('vat')->nullable();
             $table->string('description', 200)->nullable();
 
-            $table->foreign('group')->references('id')->on('product_groups')->onDelete('set null');
-            $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null');
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreign('group')->references('id')->on('product_groups')->noActionOnDelete();
+            $table->foreign('subject_id')->references('id')->on('subjects')->noActionOnDelete();
+            $table->foreignId('company_id')->constrained()->noActionOnDelete();
 
             $table->unique(['company_id', 'code']);
         });

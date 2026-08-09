@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('tax_slabs', function (Blueprint $table) {
             $table->increments('id');
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('company_id')->constrained()->noActionOnDelete();
             $table->smallInteger('year')->unsigned();
             $table->tinyInteger('slab_order')->unsigned();
             $table->decimal('income_from', 18, 2);

@@ -262,7 +262,6 @@ class FiscalYearService
         );
 
         return DB::transaction(function () use ($importData, $newFiscalYearData, $sectionsToImport) {
-            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
             Model::unguard();
 
             $newFiscalYear = Company::create($newFiscalYearData);
@@ -697,7 +696,6 @@ class FiscalYearService
             } finally {
                 Cookie::expire('active-company-id');
                 Cookie::queue('active-company-id', $originalCompanyId);
-                DB::statement('SET FOREIGN_KEY_CHECKS=1;');
                 Model::reguard();
             }
         });
