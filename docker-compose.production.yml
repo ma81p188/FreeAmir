@@ -15,7 +15,9 @@ services:
             php-fpm:
                 condition: service_healthy
         healthcheck:
-            test: ['CMD-SHELL', 'wget -qO- http://localhost/health || exit 1']
+            test:
+                - CMD-SHELL
+                - wget -qO- http://localhost/health || exit 1
             interval: 30s
             timeout: 5s
             retries: 3
@@ -37,7 +39,9 @@ services:
             DB_PORT: 1433
             DB_DATABASE: '${DB_DATABASE:-FreeAmir}'
             DB_USERNAME: '${DB_USERNAME:-sa}'
-            DB_PASSWORD: '${DB_PASSWORD:-YourStrong!Password123}'
+            DB_PASSWORD: '${DB_PASSWORD}'
+            DB_ENCRYPT: 'true'
+            DB_TRUST_SERVER_CERTIFICATE: 'true'
             CACHE_DRIVER: '${CACHE_DRIVER:-file}'
             SESSION_DRIVER: '${SESSION_DRIVER:-file}'
             QUEUE_CONNECTION: '${QUEUE_CONNECTION:-sync}'
@@ -46,25 +50,39 @@ services:
             - app-logs:/var/www/html/storage/logs
         networks:
             - freeamir
+        depends_on:
+            sqlserver:
+                condition: service_healthy
         healthcheck:
-            test: ['CMD-SHELL', 'php-fpm-healthcheck || exit 1']
+            test:
+                - CMD-SHELL
+                - php-fpm-healthcheck || exit 1
             interval: 10s
             timeout: 5s
             retries: 3
             start_period: 30s
-        depends_on:
-sqlserver:
-    condition: service_healthy
-    healthcheck:
-    test:
-            [
-            'CMD-SHELL',
-            '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${MSSQL_SA_PASSWORD}" -C -Q "SELECT 1" || exit 1'
-            ]
-    interval: 15s
-    timeout: 10s
-    retries: 10
-    start_period: 30s
+
+    sqlserver:
+        image: 'mcr.microsoft.com/mssql/server:2022-latest'
+        restart: unless-stopped
+        environment:
+            ACCEPT_EULA: 'Y'
+            MSSQL_SA_PASSWORD: '${DB_PASSWORD}'
+            MSSQL_PID: 'Express'
+        ports:
+            - '${DB_PORT_EXPOSE:-1433}:1433'
+        volumes:
+            - sqlserver-data:/var/opt/mssql
+        networks:
+            - freeamir
+        healthcheck:
+            test:
+                - CMD-SHELL
+                - /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${MSSQL_SA_PASSWORD}" -C -Q "SELECT 1" || exit 1
+            interval: 15s
+            timeout: 10s
+            retries: 10
+            start_period: 30s
 
 networks:
     freeamir:
