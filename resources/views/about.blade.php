@@ -43,6 +43,7 @@
                         {{ __('about.system_information') }}
                     </h2>
                     <div class="divider my-0"></div>
+                    <div class="overflow-x-auto">
                     <table class="table table-sm">
                         <tbody>
                             <tr>

@@ -7,7 +7,7 @@
             <form action="{{ route('backups.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="col-span-2 md:col-span-1">
                         <x-input title="{{ __('Company name') }}" name="company_name" id="company_name"
                             :value="old('company_name', '')" placeholder="{{ __('Please enter the company name') }}" />

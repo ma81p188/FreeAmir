@@ -7,6 +7,7 @@
                     class="btn btn-primary ">{{ __('Add Comment') }}</a>
             </div>
 
+            <div class="overflow-x-auto">
             <table class="table w-full mt-4">
                 <thead>
                     <tr>
@@ -54,6 +55,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
 
             @if(count($comments ) === 0)
                 <p class="text-xs text-center text-gray-500 mt-1">{{ __('There is no comments.') }}</p>

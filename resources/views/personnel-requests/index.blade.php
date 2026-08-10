@@ -41,7 +41,7 @@
 
             {{-- Filters --}}
             <div class="flex flex-wrap items-end justify-between gap-3">
-                <form action="{{ route('hr.personnel-requests.index') }}" method="GET" class="flex gap-2 w-1/2">
+                <form action="{{ route('hr.personnel-requests.index') }}" method="GET" class="flex flex-wrap gap-2 w-full lg:w-1/2">
                     <x-input name="tab" value="{{ $tab }}" hidden />
 
                     <select name="employee_id" class="select select-sm w-60">

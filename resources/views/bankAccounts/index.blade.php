@@ -5,7 +5,8 @@
             <div class="card-actions">
                 <a href="{{ route('bank-accounts.create') }}" class="btn btn-primary">{{ __('Create Bank Account') }}</a>
             </div>
-            <table class="table w-full mt-4 overflow-auto">
+            <div class="overflow-x-auto">
+            <table class="table w-full mt-4">
                 <thead>
                     <tr>
                         <th class="px-4 py-2">{{ __('Account name') }}</th>
@@ -45,6 +46,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
             {!! $bankAccounts->links() !!}
         </div>
     </div>

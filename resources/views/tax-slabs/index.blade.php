@@ -11,7 +11,8 @@
                 @endcan
             </div>
 
-            <table class="table w-full mt-4 overflow-auto">
+            <div class="overflow-x-auto">
+            <table class="table w-full mt-4">
                 <thead>
                     <tr>
                         <th>{{ __('Row') }}</th>
@@ -61,6 +62,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
 
             {!! $taxSlabs->withQueryString()->links() !!}
         </div>

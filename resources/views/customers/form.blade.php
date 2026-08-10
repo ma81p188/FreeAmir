@@ -7,7 +7,7 @@
     <div class="p-4">
         <div>
             <div class="text-sm font-semibold text-gray-600 mb-3">{{ __('Identity Information') }}</div>
-            <div class="grid grid-cols-2 gap-1 ">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 ">
                 <div>
                     <x-select title="{{ __('Account Plan Group') }}" name="group_id" id="group_id"
                         :options="$groups->pluck('name', 'id')" :selected="old('group_id', $customer->group_id ?? null)" :hint="$groupHint" />

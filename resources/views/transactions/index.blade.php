@@ -55,7 +55,8 @@
                     </div>
                 </div>
             </form>
-            <table class="table w-full mt-4 overflow-auto">
+            <div class="overflow-x-auto">
+            <table class="table w-full mt-4">
                 <thead>
                     <th class="p-2 w-12">{{ __('Date') }}</th>
                     <th class="p-2 w-16">{{ __('Doc Number') }}</th>
@@ -107,6 +108,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
             {{ $transactions->appends(request()->query())->links() }}
         </div>
     </div>

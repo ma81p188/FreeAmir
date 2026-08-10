@@ -3,7 +3,7 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <form action="{{ route('salary.work-sites.index') }}" method="GET" class="flex gap-3 w-full">
+            <form action="{{ route('salary.work-sites.index') }}" method="GET" class="flex flex-wrap gap-3 w-full">
                 <div class="w-60 [&_.input]:input-sm">
                     <x-input type="text" name="search" value="{{ $search }}" placeholder="{{ __('Search by name or code') }}" />
                 </div>
@@ -20,7 +20,8 @@
                 @endcan
             </div>
 
-            <table class="table w-full mt-4 overflow-auto">
+            <div class="overflow-x-auto">
+            <table class="table w-full mt-4">
                 <thead>
                     <tr>
                         <th>{{ __('Name') }}</th>
@@ -75,6 +76,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
 
             <div class="mt-4">
                 {{ $workSites->withQueryString()->links() }}

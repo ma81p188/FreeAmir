@@ -38,7 +38,7 @@
                 x-init="fetchSize()"
                 x-on:submit="handleSubmit($event)">
                 @csrf
-                <fieldset id="previousYears" class="grid grid-cols-2 gap-6 p-5 my-3">
+                <fieldset id="previousYears" class="grid grid-cols-1 sm:grid-cols-2 gap-6 p-5 my-3">
                     <div class="form-control">
                         <label for="source_id" class="label">
                             <span class="label-text">{{ __('Backup from') }}</span>

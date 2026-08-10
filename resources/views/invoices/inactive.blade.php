@@ -4,7 +4,8 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <form method="GET" action="{{ route('invoices.inactive.approve') }}">
-                <table class="table w-full mt-2 overflow-auto">
+                <div class="overflow-x-auto">
+                <table class="table w-full mt-2">
                     <thead>
                         <tr>
                             <th>{{ __('Type') }}</th>
@@ -53,6 +54,7 @@
                         @endforeach
                     </tbody>
                 </table>
+                </div>
 
                 <div class="flex justify-end mt-4 gap-3">
                     <a href="{{ route('invoices.inactive.approve') }}" class="btn btn-primary btn-sm gap-2">

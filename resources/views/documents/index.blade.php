@@ -84,7 +84,8 @@
 
             {{-- Table --}}
             @if ($documents->count())
-            <table class="table w-full overflow-auto">
+            <div class="overflow-x-auto">
+            <table class="table w-full">
                 <thead>
                     <tr>
                         <th class="p-2 w-12">{{ __('Doc Number') }}</th>
@@ -240,6 +241,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
             @else
                 <div class="flex flex-col items-center justify-center py-16 text-base-content/35">
                     <svg xmlns="http://www.w3.org/2000/svg" class="mb-4 h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">

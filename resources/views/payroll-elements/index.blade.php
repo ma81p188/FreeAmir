@@ -27,7 +27,8 @@
                 @endcan
             </div>
 
-            <table class="table w-full mt-4 overflow-auto">
+            <div class="overflow-x-auto">
+            <table class="table w-full mt-4">
                 <thead>
                     <tr>
                         <th>{{ __('Title') }}</th>
@@ -95,6 +96,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
 
             <div class="mt-4">
                 {{ $payrollElements->withQueryString()->links() }}

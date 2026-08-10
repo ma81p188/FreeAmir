@@ -239,7 +239,7 @@
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2">
-                        <div class="join">
+                        <div class="join flex-wrap">
                             <a href="{{ route('salary.payrolls.dashboard', $statusParams) }}"
                                 class="btn join-item btn-xs {{ $statusFilter ? 'btn-ghost' : 'btn-primary' }}">
                                 {{ __('All') }}

@@ -1,7 +1,8 @@
 @props(['conflicts', 'invoice', 'type'])
 
 @if ($type === 'products')
-    <table class="table w-full mt-4 overflow-auto">
+    <div class="overflow-x-auto">
+    <table class="table w-full mt-4">
         <caption class="font-semibold pt-5 text-right">{{ __('Products') }}</caption>
         <thead>
             <tr>
@@ -24,8 +25,10 @@
             @endforeach
         </tbody>
     </table>
+    </div>
 @else
-    <table class="table w-full mt-4 overflow-auto">
+    <div class="overflow-x-auto">
+    <table class="table w-full mt-4">
         <caption class="font-semibold pt-5 text-right">{{ __(ucfirst($type)) }}</caption>
         <thead>
             <tr>
@@ -83,4 +86,5 @@
             @endforeach
         </tbody>
     </table>
+    </div>
 @endif

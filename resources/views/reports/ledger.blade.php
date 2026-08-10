@@ -9,7 +9,7 @@
 
     <form action="{{ route('reports.result') }}" method="get">
         <x-card>
-            <div class="flex gap-4" x-data="{
+            <div class="flex flex-wrap gap-4" x-data="{
                 selectedName: '',
                 selectedCode: '',
                 selectedId: '',

@@ -20,7 +20,8 @@
                 @endcan
             </div>
 
-            <table class="table w-full mt-4 overflow-auto">
+            <div class="overflow-x-auto">
+            <table class="table w-full mt-4">
                 <thead>
                     <tr>
                         <th>{{ __('Name') }}</th>
@@ -78,6 +79,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
 
             <div class="mt-4">
                 {{ $workShifts->withQueryString()->links() }}

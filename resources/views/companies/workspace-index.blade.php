@@ -7,7 +7,8 @@
                     <a href="{{ route('companies.create') }}" class="btn btn-primary">{{ __('Create Company') }}</a>
                 @endcan
             </div>
-            <table class="table w-full mt-4 overflow-auto">
+            <div class="overflow-x-auto">
+            <table class="table w-full mt-4">
                 <thead>
                     <tr>
                         <th class="px-4 py-2">{{ __('Name') }}</th>
@@ -53,6 +54,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
             {!! $companies->links() !!}
         </div>
     </div>

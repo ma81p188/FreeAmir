@@ -1,4 +1,5 @@
-<table class="table w-full mt-4 overflow-auto">
+<div class="overflow-x-auto">
+<table class="table w-full mt-4">
     <thead>
         <tr>
             <th class="px-4 py-2">{{ __('Invoice Number') }}</th>
@@ -133,6 +134,7 @@
         @endforeach
     </tbody>
 </table>
+</div>
 
 @if (request('status') !== null)
     @php

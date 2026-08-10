@@ -239,7 +239,7 @@
                 </a>
             </div>
             <div class="overflow-x-auto">
-                <table class="table w-full mt-4 overflow-auto">
+                <table class="table w-full mt-4">
                     <thead>
                         <tr>
                             <th class="px-4 py-3">{{ __('Commented By') }}</th>
@@ -288,7 +288,7 @@
             {{-- Orders --}}
             <div class="divider text-lg font-semibold">{{ __('Orders') }}</div>
             <div class="overflow-x-auto">
-                <table class="table w-full mt-4 overflow-auto">
+                <table class="table w-full mt-4">
                     <thead>
                         <tr>
                             <th class="px-4 py-3">{{ __('Date') }}</th>

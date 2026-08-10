@@ -30,7 +30,8 @@
                 @endcan
             </div>
 
-            <table class="table w-full mt-4 overflow-auto">
+            <div class="overflow-x-auto">
+            <table class="table w-full mt-4">
                 <thead>
                     <tr>
                         <th>{{ __('Employee') }}</th>
@@ -82,6 +83,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
 
             {!! $decrees->withQueryString()->links() !!}
         </div>

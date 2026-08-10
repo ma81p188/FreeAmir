@@ -27,13 +27,13 @@
         </div>
 
         <div class="card-body">
-            <div class="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
                 <x-stat-card :title="__('VAT')" :value="formatNumber($serviceGroup->vat) . '%'" type="base" icon="vat" />
                 <x-stat-card :title="__('Services Count')" :value="formatNumber($serviceGroup->services_count ?? $serviceGroup->services()->count()) ?? '-'" type="base" icon="services" />
             </div>
 
             @can('reports.ledger')
-                <div class="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
                     <x-stat-card-link :title="__('Subject Balance')" :value="formatNumber(\App\Services\SubjectService::sumSubject($serviceGroup->subject) ?? 0)" :link="route('transactions.index', ['subject_id' => $serviceGroup->subject->id])" :currency="config('amir.currency') ?? __('Rial')" type="success"
                         icon="income" />
                     <x-stat-card-link :title="__('COGS Subject')" :value="formatNumber(\App\Services\SubjectService::sumSubject($serviceGroup->cogsSubject) ?? 0)" :link="route('transactions.index', ['subject_id' => $serviceGroup->cogsSubject->id])" :currency="config('amir.currency') ?? __('Rial')"

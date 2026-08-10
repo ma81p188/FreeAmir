@@ -97,7 +97,7 @@
         </div>
     </aside>
 
-    <main class="min-[1430px]:w-[1430px] mx-auto mt-5 overflow-hidden">
+    <main class="min-[1430px]:w-[1430px] mx-auto mt-5">
         {{ $slot }}
     </main>
 

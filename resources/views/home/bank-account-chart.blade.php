@@ -6,7 +6,7 @@
                 <p class="text-xs text-base-content/55">{{ __('Per-account balance over time') }}</p>
             </div>
 
-            <div class="flex gap-2" x-data="bankSelectHandler()" x-init="initializeBank()">
+            <div class="flex flex-wrap gap-2" x-data="bankSelectHandler()" x-init="initializeBank()">
                 <select class="select select-xs select-bordered" x-model="selectedBankAccount" @change="handleBankChange">
                     @foreach ($bankAccounts as $bankAccount)
                         <option value="{{ $bankAccount->id }}" {{ $loop->first ? 'selected' : '' }}>{{ $bankAccount->name }}</option>

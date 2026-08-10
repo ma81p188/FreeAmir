@@ -2,7 +2,7 @@
     <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <dl class="grid grid-cols-4 gap-3">
+            <dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 @foreach (\App\Enums\InvoiceStatus::cases() as $status)
                     @if (! $status->isReadyToApprove() && ! $status->isRejected())
                         @php
@@ -26,7 +26,8 @@
                 @endforeach
             </dl>
 
-            <table class="table w-full mt-4 overflow-auto">
+            <div class="overflow-x-auto">
+            <table class="table w-full mt-4">
                 <thead>
                     <tr>
                         <th class="p-2">{{ __('Number') }}</th>
@@ -124,6 +125,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
 
             @if (request('status') !== null)
                 <div class="px-4 py-2 text-left">

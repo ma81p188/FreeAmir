@@ -6,7 +6,7 @@
                 <p class="text-xs text-base-content/55">{{ __('Trend across the selected period') }}</p>
             </div>
 
-            <div class="flex gap-2" x-data="cashTypesSelectHandler()" x-init="initializeCashBook()">
+            <div class="flex flex-wrap gap-2" x-data="cashTypesSelectHandler()" x-init="initializeCashBook()">
                 <select x-model="selectedCashType" x-on:change="handleCashBookChange" class="select select-xs select-bordered">
                     @foreach ($cashTypes as $cashTypeName)
                         <option value="{{ $cashTypeName }}" {{ $loop->first ? 'selected' : '' }}>{{ __($cashTypeName) }}</option>

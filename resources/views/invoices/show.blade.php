@@ -211,7 +211,7 @@
 
             <div>
                 <div class="divider text-lg font-semibold">{{ __('Items') }}</div>
-                <div>
+                <div class="overflow-x-auto">
                     <table class="table w-full">
                         <thead>
                             <tr>
@@ -280,7 +280,7 @@
                     @if ($invoice->getReturnInvoice())
                         <div class="divider text-lg font-semibold">{{ __('Invoice') }}
                             {{ __('Return from') }}{{ $invoice->invoice_type->label() }}</div>
-                        <div>
+                        <div class="overflow-x-auto">
                             <table class="table w-full">
                                 <thead>
                                     <tr>
@@ -409,7 +409,7 @@
                             </div>
                         </div>
                     </div>
-                    <div>
+                    <div class="overflow-x-auto">
                         <table class="table w-full">
                             <thead>
                                 <tr>
@@ -482,7 +482,7 @@
                 <div>
                     <div class="divider text-lg font-semibold">{{ __('Ancillary Costs') }}</div>
                     @if ($invoice->ancillaryCosts->isNotEmpty())
-                        <div class="mt-4">
+                        <div class="mt-4 overflow-x-auto">
                             <table class="table w-full">
                                 <thead>
                                     <tr>

@@ -203,6 +203,12 @@ main {
     min-width: 0;
 }
 
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
 :root {
     --freeamir-control-focus-color: rgb(15 23 42 / 0.42);
     --freeamir-control-focus-shadow: rgb(15 23 42 / 0.08);

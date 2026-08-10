@@ -2,7 +2,7 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <h2 class="text-2xl font-bold">{{ $user->name }}</h2>
-            <div class="grid grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div class="col-span-2 md:col-span-1">
                     <x-input disabled title="{{ __('Email') }}" name="id" :value="$user->email" />
                 </div>

@@ -33,6 +33,7 @@
                     @endif
                 @endif
             </div>
+            <div class="overflow-x-auto">
             <table class="table w-full mt-4">
                 <thead>
                     <tr>
@@ -96,6 +97,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
 
             @if($subjects->isEmpty())
                 <div class="text-center py-2">

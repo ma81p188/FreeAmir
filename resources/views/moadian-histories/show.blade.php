@@ -48,7 +48,7 @@
                 </div>
             </div>
 
-            <div>
+            <div class="overflow-x-auto">
                 <table class="w-full divide-y">
                     <thead>
                         <tr>

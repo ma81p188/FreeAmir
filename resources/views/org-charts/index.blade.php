@@ -3,7 +3,7 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <form action="{{ route('hr.org-charts.index') }}" method="GET" class="flex gap-3 w-full">
+            <form action="{{ route('hr.org-charts.index') }}" method="GET" class="flex flex-wrap gap-3 w-full">
                 <div class="w-60 [&_.input]:input-sm">
                     <x-input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('Search by title') }}" />
                 </div>
@@ -20,7 +20,8 @@
                 @endcan
             </div>
 
-            <table class="table w-full mt-4 overflow-auto">
+            <div class="overflow-x-auto">
+            <table class="table w-full mt-4">
                 <thead>
                     <tr>
                         <th>{{ __('Title') }}</th>
@@ -68,6 +69,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
 
             {!! $orgCharts->withQueryString()->links() !!}
         </div>

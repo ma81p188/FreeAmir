@@ -5,7 +5,7 @@
             <x-input name="service_buy" value="{{ request('service_buy') }}" />
         @endif
     </div>
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-2">
         <div class="[&_.input]:input-sm w-30">
             <x-input name="number" value="{{ request('number') }}" placeholder="{{ __('Invoice Number') }}" />
         </div>

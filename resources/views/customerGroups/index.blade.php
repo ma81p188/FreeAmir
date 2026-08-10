@@ -27,7 +27,8 @@
             </div>
 
             <div class="p-4 sm:p-5">
-            <table class="table w-full overflow-auto">
+            <div class="overflow-x-auto">
+            <table class="table w-full">
                 <thead>
                     <tr>
                         <th class="px-4 py-2">{{ __('Subject Code') }}</th>
@@ -84,6 +85,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
             </div>
 
             {{-- Pagination --}}
