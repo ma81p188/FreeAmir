@@ -445,6 +445,12 @@ if (document.querySelector(".selfSelectBoxContainer")) {
 
 }
 
+Alpine.store('sidebar', {
+    open: false,
+    toggle() { this.open = !this.open; },
+    close() { this.open = false; },
+});
+
 Alpine.store('utils', {
     openSelectBox(e) {
         document.querySelectorAll(".selfSelectBox").forEach(function (box) {

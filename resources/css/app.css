@@ -198,6 +198,9 @@ main {
     position: relative;
     z-index: 2;
     padding: 0 .4rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 :root {
@@ -253,6 +256,23 @@ main {
     .app-main-menu > li > a:hover,
     .app-main-menu > li > details > summary:hover {
         @apply bg-base-200 text-base-content;
+    }
+
+    #mobile-drawer .app-main-menu .app-main-menu-panel {
+        position: static;
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        box-shadow: none;
+        border: none;
+        border-inline-start: 2px solid var(--color-base-content, rgb(15 23 42 / 0.15));
+        border-radius: 0;
+        margin-top: 0.125rem;
+        margin-bottom: 0.25rem;
+    }
+
+    #mobile-drawer .app-main-menu > li > details {
+        overflow: visible;
     }
 
     .super-admin-content > .card,

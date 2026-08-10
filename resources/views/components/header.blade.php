@@ -1,9 +1,26 @@
 <header class="sticky top-0 z-30 w-full border-b border-base-content/8 bg-base-100/90 backdrop-blur-md">
     <div class="navbar min-h-14 items-center justify-between gap-3 px-3 min-[1430px]:w-[1430px] min-[1430px]:mx-auto">
-        <nav class="flex min-w-0 flex-1 items-center gap-1" aria-label="{{ __('Main navigation') }}">
-            <a href="/" class="flex shrink-0 items-center rounded-lg p-1.5 transition-colors hover:bg-base-200" aria-label="{{ config('app.name') }}">
-                <img src="/images/logo.png" alt="Logo" class="h-9 w-9 object-contain">
-            </a>
+
+        {{-- Mobile hamburger (visible < lg) --}}
+        <button
+            x-on:click="$store.sidebar.toggle()"
+            class="btn btn-ghost btn-square btn-sm lg:hidden"
+            aria-label="{{ __('باز کردن منو') }}"
+            aria-expanded="false"
+            aria-controls="mobile-drawer"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+        </button>
+
+        {{-- Logo (always visible) --}}
+        <a href="/" class="flex shrink-0 items-center rounded-lg p-1.5 transition-colors hover:bg-base-200" aria-label="{{ config('app.name') }}">
+            <img src="/images/logo.png" alt="Logo" class="h-9 w-9 object-contain">
+        </a>
+
+        {{-- Desktop menu (visible >= lg) --}}
+        <nav class="hidden min-w-0 flex-1 items-center gap-1 lg:flex" aria-label="{{ __('Main navigation') }}">
             <ul class="app-main-menu menu px-1 lg:menu-horizontal lg:flex-nowrap" data-main-menu>
                 <x-menu />
             </ul>
