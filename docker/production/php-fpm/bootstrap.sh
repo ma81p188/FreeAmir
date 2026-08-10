@@ -11,12 +11,11 @@ fi
 
 # Sync runtime environment variables into .env so config:cache reflects them
 echo "[bootstrap] Syncing environment variables into .env..."
-for var in APP_ENV APP_DEBUG APP_URL; do
+for var in APP_ENV APP_DEBUG APP_URL DB_CONNECTION DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD DB_ENCRYPT DB_TRUST_SERVER_CERTIFICATE; do
     if [ -n "${!var}" ]; then
         sed -i "s|^${var}=.*|${var}=${!var}|" /var/www/html/.env
     fi
 done
-
 # Generate app key if not set
 if ! grep -q "^APP_KEY=base64:" /var/www/html/.env; then
     echo "[bootstrap] Generating application key..."
