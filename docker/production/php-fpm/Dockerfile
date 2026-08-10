@@ -15,7 +15,7 @@ RUN npm run build
 # =============================================================================
 # Stage 1: PHP builder
 # =============================================================================
-FROM php:8.3-fpm AS builder
+FROM php:8.3-fpm-bookworm AS builder
 
 LABEL maintainer="FreeAmir"
 
@@ -86,7 +86,7 @@ RUN mkdir -p \
 # =============================================================================
 # Stage 2: Production
 # =============================================================================
-FROM php:8.3-fpm AS production
+FROM php:8.3-fpm-bookworm AS production
 
 ARG APP_VERSION=nightly-local
 ENV APP_VERSION="${APP_VERSION}"
