@@ -1,5 +1,5 @@
 # =============================================================================
-# Stage 0: Node builder — install Node deps and build frontend assets
+# Stage 0: Node builder
 # =============================================================================
 FROM node:22-alpine AS node-builder
 
@@ -11,35 +11,41 @@ RUN npm ci --prefer-offline
 COPY . .
 RUN npm run build
 
+
 # =============================================================================
-# Stage 1: Builder — install Composer deps (no dev) with all build-time tools
+# Stage 1: PHP builder
 # =============================================================================
 FROM php:8.3-fpm AS builder
 
 LABEL maintainer="FreeAmir"
 
-# Install Microsoft ODBC Driver 18 + SQL Server PHP extensions
-RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
-    && curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+# Basic build dependencies + Microsoft repository prerequisites
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+        gnupg \
+        unzip \
+        libpng-dev \
+        libonig-dev \
+        libssl-dev \
+        libxml2-dev \
+        libcurl4-openssl-dev \
+        libicu-dev \
+        libzip-dev \
+        libpq-dev \
+        unixodbc-dev \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+        | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg \
+    && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" \
+        > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update \
     && ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
         msodbcsql18 \
         mssql-tools18 \
-        unixodbc-dev \
     && pecl install sqlsrv pdo_sqlsrv \
-    && docker-php-ext-enable sqlsrv pdo_sqlsrv
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    unzip \
-    libpng-dev \
-    libonig-dev \
-    libssl-dev \
-    libxml2-dev \
-    libcurl4-openssl-dev \
-    libicu-dev \
-    libzip-dev \
-    libpq-dev \
+    && docker-php-ext-enable sqlsrv pdo_sqlsrv \
     && docker-php-ext-install -j$(nproc) \
         pdo_mysql \
         pdo_pgsql \
@@ -51,76 +57,104 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         mbstring \
         xml \
         opcache \
-    && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 WORKDIR /var/www/html
 
-# Copy full application source so post-autoload-dump Artisan scripts can run
 COPY . /var/www/html
 
-# Bring in the compiled frontend assets from the node-builder stage
 COPY --from=node-builder /app/public/build /var/www/html/public/build
 
-# Install Composer and production dependencies
-RUN mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs \
+RUN mkdir -p \
+        bootstrap/cache \
+        storage/framework/cache/data \
+        storage/framework/sessions \
+        storage/framework/views \
+        storage/logs \
     && chmod -R 775 bootstrap/cache storage \
-    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
-    && composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
+    && curl -sS https://getcomposer.org/installer \
+        | php -- --install-dir=/usr/local/bin --filename=composer \
+    && composer install \
+        --no-dev \
+        --optimize-autoloader \
+        --no-interaction \
+        --no-progress \
+        --prefer-dist
+
 
 # =============================================================================
-# Stage 2: Production — lean PHP-FPM runtime image
+# Stage 2: Production
 # =============================================================================
 FROM php:8.3-fpm AS production
 
 ARG APP_VERSION=nightly-local
 ENV APP_VERSION="${APP_VERSION}"
 
-# Runtime-only system libraries (compiled .so names, not -dev headers)
+# Runtime dependencies + Microsoft ODBC Driver 18
 RUN apt-get update \
-    && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
-    && curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list \
-    && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+        gnupg \
         libpng16-16 \
         libonig5 \
         libxml2 \
-        libicu76 \
-        libzip5 \
+        libicu72 \
+        libzip4 \
         libpq5 \
         libfcgi-bin \
         procps \
+        unixodbc \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+        | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg \
+    && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" \
+        > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
         msodbcsql18 \
         mssql-tools18 \
-        unixodbc \
-    && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install php-fpm health-check script
-RUN curl -fsSL https://raw.githubusercontent.com/renatomefi/php-fpm-healthcheck/master/php-fpm-healthcheck \
-    -o /usr/local/bin/php-fpm-healthcheck \
+
+# PHP-FPM healthcheck
+RUN curl -fsSL \
+        https://raw.githubusercontent.com/renatomefi/php-fpm-healthcheck/master/php-fpm-healthcheck \
+        -o /usr/local/bin/php-fpm-healthcheck \
     && chmod +x /usr/local/bin/php-fpm-healthcheck
 
-# Copy compiled PHP extensions and config from builder
+
+# Copy PHP extensions and configuration from builder
 COPY --from=builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 COPY --from=builder /usr/local/bin/docker-php-ext-* /usr/local/bin/
 
-# Use PHP's recommended production ini
+
+# PHP production configuration
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
-# App-specific PHP settings (upload limits, opcache, timezone, etc.)
-COPY docker/production/php-fpm/php.ini /usr/local/etc/php/conf.d/99-app.ini
+COPY docker/production/php-fpm/php.ini \
+    /usr/local/etc/php/conf.d/99-app.ini
 
-# PHP-FPM pool config (enables /status endpoint for healthcheck)
-COPY docker/production/php-fpm/php-fpm.conf /usr/local/etc/php-fpm.d/zz-app.conf
+COPY docker/production/php-fpm/php-fpm.conf \
+    /usr/local/etc/php-fpm.d/zz-app.conf
 
-# Copy bootstrap/entrypoint
-COPY docker/production/php-fpm/bootstrap.sh /usr/local/bin/bootstrap.sh
+
+# Bootstrap
+COPY docker/production/php-fpm/bootstrap.sh \
+    /usr/local/bin/bootstrap.sh
+
 RUN chmod +x /usr/local/bin/bootstrap.sh
 
-# Copy application code + vendor from builder
-COPY --from=builder --chown=www-data:www-data /var/www/html /var/www/html
 
-# Ensure storage and cache dirs exist and are writable
+# Application
+COPY --from=builder --chown=www-data:www-data \
+    /var/www/html /var/www/html
+
+
+# Storage/cache permissions
 RUN mkdir -p \
         /var/www/html/storage/app/public \
         /var/www/html/storage/framework/cache/data \
@@ -145,4 +179,5 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
     CMD php-fpm-healthcheck || exit 1
 
 ENTRYPOINT ["/usr/local/bin/bootstrap.sh"]
+
 CMD ["php-fpm"]
